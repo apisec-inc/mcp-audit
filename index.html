@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APIsec MCP Discovery and Audit</title>
+    <link rel="stylesheet" href="styles.css?v=8">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>APIsec MCP Discovery and Audit</h1>
+            <p class="subtitle">Discover and audit Model Context Protocol servers across your organization</p>
+        </header>
+
+        <!-- Main Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="repo-audit">Source Code Repo Audit</button>
+            <button class="tab-btn" data-tab="local-audit">Local System Audit</button>
+        </div>
+
+        <!-- Tab Content -->
+        <main>
+            <!-- Tab 1: Source Code Repo Audit -->
+            <section id="repo-audit" class="tab-content active">
+                <div class="tab-description">
+                    <p>Scan source code repositories for MCP configurations, dependencies, and server definitions.</p>
+                </div>
+
+                <!-- Source Tiles -->
+                <div id="source-tiles" class="source-tiles">
+                    <div class="source-tile available" data-source="github">
+                        <div class="tile-icon">
+                            <svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor">
+                                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                            </svg>
+                        </div>
+                        <div class="tile-name">GitHub</div>
+                        <div class="tile-status">Available</div>
+                    </div>
+
+                    <div class="source-tile coming-soon" data-source="gitlab">
+                        <div class="tile-icon">
+                            <svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor">
+                                <path d="M22.65 14.39L12 22.13 1.35 14.39a.84.84 0 01-.3-.94l1.22-3.78 2.44-7.51A.42.42 0 014.82 2a.43.43 0 01.58 0 .42.42 0 01.11.18l2.44 7.49h8.1l2.44-7.51A.42.42 0 0118.6 2a.43.43 0 01.58 0 .42.42 0 01.11.18l2.44 7.51L23 13.45a.84.84 0 01-.35.94z"/>
+                            </svg>
+                        </div>
+                        <div class="tile-name">GitLab</div>
+                        <div class="tile-status">Coming Soon</div>
+                    </div>
+
+                    <div class="source-tile coming-soon" data-source="bitbucket">
+                        <div class="tile-icon">
+                            <svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor">
+                                <path d="M.778 1.213a.768.768 0 00-.768.892l3.263 19.81c.084.5.515.868 1.022.873H19.95a.772.772 0 00.77-.646l3.27-20.03a.768.768 0 00-.768-.891zM14.52 15.53H9.522L8.17 8.466h7.561z"/>
+                            </svg>
+                        </div>
+                        <div class="tile-name">Bitbucket</div>
+                        <div class="tile-status">Coming Soon</div>
+                    </div>
+
+                    <div class="source-tile coming-soon" data-source="azure">
+                        <div class="tile-icon">
+                            <svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor">
+                                <path d="M22.379 23.343a1.62 1.62 0 01-1.086.657H2.707a1.62 1.62 0 01-1.086-.657 1.62 1.62 0 01-.198-1.23l3.2-12.16a1.62 1.62 0 011.284-1.21l9.857-1.622a1.62 1.62 0 011.86 1.275l2.957 13.717a1.62 1.62 0 01-.198 1.23zM13.241 2.112l-4.816.792a.54.54 0 00-.428.403L6.93 7.636l6.945-1.143z"/>
+                            </svg>
+                        </div>
+                        <div class="tile-name">Azure DevOps</div>
+                        <div class="tile-status">Coming Soon</div>
+                    </div>
+
+                    <div class="source-tile coming-soon" data-source="svn">
+                        <div class="tile-icon">
+                            <svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                            </svg>
+                        </div>
+                        <div class="tile-name">SVN</div>
+                        <div class="tile-status">Coming Soon</div>
+                    </div>
+                </div>
+
+                <!-- GitHub Scanning Section (hidden by default) -->
+                <div id="github-section" class="scan-section hidden">
+                    <button class="back-btn" id="back-to-tiles">← Back to Sources</button>
+
+                    <!-- Step 1: Connect GitHub -->
+                    <div id="connect-section" class="card">
+                        <h2>Step 1: Connect to GitHub</h2>
+                        <p>Authenticate with GitHub to scan your repositories for MCP configurations.</p>
+
+                        <div class="input-group">
+                            <label for="github-token">GitHub Personal Access Token</label>
+                            <input type="password" id="github-token" placeholder="ghp_xxxxxxxxxxxx">
+                            <small>
+                                Need a token?
+                                <a href="https://github.com/settings/tokens/new?description=MCP%20Audit&scopes=repo,read:org" target="_blank">
+                                    Create one with repo and read:org scopes
+                                </a>
+                            </small>
+                        </div>
+
+                        <button id="connect-btn" class="btn primary">Connect to GitHub</button>
+
+                        <div id="connect-status" class="status hidden"></div>
+                    </div>
+
+                    <!-- Step 2: Select Organization -->
+                    <div id="org-section" class="card hidden">
+                        <h2>Step 2: Select Target</h2>
+                        <p>Choose which organization or user account to scan for MCP configurations.</p>
+
+                        <div class="input-group">
+                            <label for="org-select">Organization / User</label>
+                            <select id="org-select">
+                                <option value="">Select a target...</option>
+                            </select>
+                        </div>
+
+                        <button id="scan-btn" class="btn primary" disabled>Scan Repositories</button>
+                    </div>
+
+                    <!-- Step 3: Scanning Progress -->
+                    <div id="progress-section" class="card hidden">
+                        <h2>Scanning...</h2>
+                        <div class="progress-container">
+                            <div class="progress-bar">
+                                <div id="progress-fill" class="progress-fill"></div>
+                            </div>
+                            <p id="progress-text">Initializing...</p>
+                        </div>
+                        <div id="scan-log" class="scan-log"></div>
+                    </div>
+
+                    <!-- Step 4: Results -->
+                    <div id="results-section" class="card hidden">
+                        <h2>Scan Results</h2>
+
+                        <!-- Summary -->
+                        <div id="summary" class="summary-grid">
+                            <!-- Populated by JavaScript -->
+                        </div>
+
+                        <!-- Results Table -->
+                        <div class="table-container">
+                            <table id="results-table">
+                                <thead>
+                                    <tr>
+                                        <th>MCP Name</th>
+                                        <th>Description</th>
+                                        <th>Source</th>
+                                        <th>Repository</th>
+                                        <th>Known</th>
+                                        <th>Risk</th>
+                                        <th>Risk Flags</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="results-body">
+                                    <!-- Populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="actions">
+                            <button id="export-json-btn" class="btn secondary">Export JSON</button>
+                            <button id="export-csv-btn" class="btn secondary">Export CSV</button>
+                            <button id="export-md-btn" class="btn secondary">Export Markdown</button>
+                            <button id="scan-again-btn" class="btn outline">Scan Again</button>
+                        </div>
+                    </div>
+
+                    <!-- No Results -->
+                    <div id="no-results-section" class="card hidden">
+                        <h2>No MCPs Found</h2>
+                        <p>No MCP configurations were found in the scanned repositories.</p>
+                        <p>This could mean:</p>
+                        <ul>
+                            <li>Your organization isn't using MCPs yet</li>
+                            <li>MCP configs are in private repos you don't have access to</li>
+                            <li>MCPs are configured locally on developer machines (use the Local System Audit tab)</li>
+                            <li>GitHub's search index may take time to update for new repos</li>
+                        </ul>
+                        <button id="scan-again-btn-2" class="btn outline">Scan Again</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab 2: Local System Audit -->
+            <section id="local-audit" class="tab-content">
+                <div class="tab-description">
+                    <p>Scan your local machine for MCP configurations in Claude Desktop, Cursor, VS Code, and other applications.</p>
+                </div>
+
+                <div class="local-audit-content">
+                    <div class="card">
+                        <h2>Download CLI Tool</h2>
+                        <p>The CLI tool scans your local computer for MCP configurations in:</p>
+
+                        <ul class="feature-list">
+                            <li><strong>Claude Desktop</strong> - Anthropic's desktop application</li>
+                            <li><strong>Cursor</strong> - AI-powered code editor</li>
+                            <li><strong>VS Code</strong> - With Continue extension</li>
+                            <li><strong>Windsurf</strong> - Codeium's editor</li>
+                            <li><strong>Zed</strong> - Modern code editor</li>
+                            <li><strong>Project folders</strong> - .mcp/ directories, mcp.json files</li>
+                        </ul>
+
+                        <div class="download-box">
+                            <a href="mcp-audit-cli.zip" download class="btn primary download-btn">
+                                Download CLI Tool (ZIP)
+                            </a>
+                            <span class="download-size">~42 KB</span>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h2>Installation Instructions</h2>
+                        <div class="install-steps">
+                            <div class="step">
+                                <div class="step-number">1</div>
+                                <div class="step-content">
+                                    <strong>Download & Extract</strong>
+                                    <p>Download the ZIP file above and extract it to a folder</p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">2</div>
+                                <div class="step-content">
+                                    <strong>Open Terminal</strong>
+                                    <p>Open Terminal (Mac) or Command Prompt (Windows)</p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">3</div>
+                                <div class="step-content">
+                                    <strong>Navigate to Folder</strong>
+                                    <p><code>cd mcp-audit-cli</code></p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">4</div>
+                                <div class="step-content">
+                                    <strong>Install</strong>
+                                    <p><code>pip install -e .</code></p>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <div class="step-number">5</div>
+                                <div class="step-content">
+                                    <strong>Run Scan</strong>
+                                    <p><code>mcp-audit scan</code></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="requirements">
+                            <p><strong>Requirements:</strong> Python 3.9 or higher</p>
+                            <p>Don't have Python? <a href="https://www.python.org/downloads/" target="_blank">Download Python</a></p>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h2>CLI Commands</h2>
+                        <div class="command-list">
+                            <div class="command">
+                                <code>mcp-audit scan</code>
+                                <div class="command-details">
+                                    <p>Scans your local machine for all MCP server configurations.</p>
+                                    <p>Checks Claude Desktop, Cursor, VS Code, Windsurf, Zed, and project folders.</p>
+                                    <p>Displays a summary table showing each MCP found with its risk level.</p>
+                                </div>
+                            </div>
+                            <div class="command">
+                                <code>mcp-audit scan --verbose</code>
+                                <div class="command-details">
+                                    <p>Runs the same scan but with detailed output for each step.</p>
+                                    <p>Shows exactly which configuration files are being checked.</p>
+                                    <p>Useful for troubleshooting or understanding what the tool is doing.</p>
+                                </div>
+                            </div>
+                            <div class="command">
+                                <code>mcp-audit registry</code>
+                                <div class="command-details">
+                                    <p>Displays the complete list of known MCP servers in our database.</p>
+                                    <p>Shows provider, risk level, and description for each registered MCP.</p>
+                                    <p>Helps you identify whether an MCP is from a trusted source.</p>
+                                </div>
+                            </div>
+                            <div class="command">
+                                <code>mcp-audit registry --risk critical</code>
+                                <div class="command-details">
+                                    <p>Filters the registry to show only MCPs with critical risk level.</p>
+                                    <p>Critical MCPs have access to databases, cloud infrastructure, or shell commands.</p>
+                                    <p>Use this to quickly identify the most sensitive MCP servers in your environment.</p>
+                                </div>
+                            </div>
+                            <div class="command">
+                                <code>mcp-audit scan --format json -o results.json</code>
+                                <div class="command-details">
+                                    <p>Exports your scan results to a JSON file for further analysis.</p>
+                                    <p>Perfect for integrating with other security tools or CI/CD pipelines.</p>
+                                    <p>Also supports CSV and Markdown formats for reports and documentation.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer>
+            <p>
+                <strong>Privacy:</strong> Your credentials and code never leave your browser.
+                All scanning happens client-side.
+            </p>
+            <p>APIsec MCP Discovery and Audit</p>
+        </footer>
+    </div>
+
+    <script src="app.js?v=9"></script>
+</body>
+</html>
