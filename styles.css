@@ -675,7 +675,7 @@ tr:hover {
     padding: 1rem;
     background: var(--background);
     border-radius: var(--radius);
-    border-left: 3px solid var(--primary);
+    border: 1px solid var(--border);
 }
 
 .command code {
