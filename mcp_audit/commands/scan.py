@@ -12,6 +12,7 @@ import json
 from mcp_audit.scanners import claude, cursor, vscode, project, windsurf, zed, docker
 from mcp_audit.outputs import formatter
 from mcp_audit.models import ScanResult
+from mcp_audit.data.risk_definitions import RISK_FLAGS, get_severity_for_flag, get_risk_flag_info
 
 app = typer.Typer(help="Scan for MCP configurations")
 console = Console()
@@ -40,6 +41,9 @@ def scan_local(
     ),
     with_registry: bool = typer.Option(
         True, "--registry/--no-registry", help="Match MCPs against known registry (default: on)"
+    ),
+    remediation: bool = typer.Option(
+        False, "--remediation", "-r", help="Show detailed findings and remediation guidance"
     ),
 ):
     """
@@ -162,6 +166,15 @@ def scan_local(
 
     # Summary
     _print_summary(results, trust_results if with_trust else None, with_registry)
+
+    # Remediation guidance
+    if remediation:
+        _print_remediation(results)
+    else:
+        # Hint about remediation flag if there are risk flags
+        with_risks = [r for r in results if r.risk_flags]
+        if with_risks:
+            console.print("\n[dim]Run `mcp-audit scan --remediation` for detailed findings and fix guidance.[/dim]")
 
 
 def _print_table(results: list[ScanResult], trust_results: dict = None, with_registry: bool = False):
@@ -287,3 +300,49 @@ def _truncate(s: str, length: int) -> str:
     if len(s) <= length:
         return s
     return s[:length-3] + "..."
+
+
+def _print_remediation(results: list[ScanResult]):
+    """Print detailed findings and remediation guidance"""
+    # Collect all risk flags across results
+    flag_to_mcps: dict[str, list[str]] = {}
+    for r in results:
+        for flag in r.risk_flags:
+            if flag not in flag_to_mcps:
+                flag_to_mcps[flag] = []
+            flag_to_mcps[flag].append(r.name)
+
+    if not flag_to_mcps:
+        console.print("\n[green]No risk flags detected. All MCPs appear safe.[/green]")
+        return
+
+    console.print("\n" + "─" * 60)
+    console.print("[bold]FINDINGS & REMEDIATION[/bold]")
+    console.print("─" * 60 + "\n")
+
+    # Sort flags by severity
+    severity_order = {"critical": 0, "high": 1, "medium": 2, "low": 3, "unknown": 4}
+    sorted_flags = sorted(
+        flag_to_mcps.items(),
+        key=lambda x: severity_order.get(get_severity_for_flag(x[0]), 4)
+    )
+
+    for flag, mcps in sorted_flags:
+        info = get_risk_flag_info(flag)
+        severity = info.get("severity", "unknown").upper()
+
+        # Color based on severity
+        if severity == "CRITICAL":
+            severity_styled = f"[bold red]{severity}[/bold red]"
+        elif severity == "HIGH":
+            severity_styled = f"[bold yellow]{severity}[/bold yellow]"
+        elif severity == "MEDIUM":
+            severity_styled = f"[blue]{severity}[/blue]"
+        else:
+            severity_styled = f"[dim]{severity}[/dim]"
+
+        console.print(f"[{severity_styled}] [bold]{flag}[/bold] ({len(mcps)} MCP(s) affected)")
+        console.print(f"  [dim]Why:[/dim] {info.get('explanation', 'Unknown')}")
+        console.print(f"  [dim]Fix:[/dim] {info.get('remediation', 'Review manually')}")
+        console.print(f"  [dim]MCPs:[/dim] {', '.join(mcps)}")
+        console.print()

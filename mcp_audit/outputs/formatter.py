@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Optional
 
 from mcp_audit.models import ScanResult, CollectedConfig
+from mcp_audit.data.risk_definitions import get_risk_flag_info, get_severity_for_flag
 
 
 def format_results(results: list[ScanResult], format: str) -> str:
@@ -40,12 +41,43 @@ def format_aggregated(
 
 def _to_json(results: list[ScanResult]) -> str:
     """Convert results to JSON"""
+    # Build findings from risk flags
+    findings = _build_findings(results)
+
     data = {
         "scan_time": datetime.now().isoformat(),
         "total_mcps": len(results),
         "mcps": [r.to_dict() for r in results],
+        "findings": findings,
     }
     return json.dumps(data, indent=2)
+
+
+def _build_findings(results: list[ScanResult]) -> list[dict]:
+    """Build findings list from results' risk flags"""
+    flag_to_mcps: dict[str, list[str]] = {}
+    for r in results:
+        for flag in r.risk_flags:
+            if flag not in flag_to_mcps:
+                flag_to_mcps[flag] = []
+            flag_to_mcps[flag].append(r.name)
+
+    findings = []
+    for flag, mcps in flag_to_mcps.items():
+        info = get_risk_flag_info(flag)
+        findings.append({
+            "flag": flag,
+            "severity": get_severity_for_flag(flag),
+            "affected_mcps": mcps,
+            "explanation": info.get("explanation", ""),
+            "remediation": info.get("remediation", ""),
+        })
+
+    # Sort by severity
+    severity_order = {"critical": 0, "high": 1, "medium": 2, "low": 3, "unknown": 4}
+    findings.sort(key=lambda x: severity_order.get(x["severity"], 4))
+
+    return findings
 
 
 def _to_markdown(results: list[ScanResult]) -> str:
@@ -61,22 +93,34 @@ def _to_markdown(results: list[ScanResult]) -> str:
         "| MCP Name | Source | Found In | Type | Risk Flags |",
         "|----------|--------|----------|------|------------|",
     ]
-    
+
     for r in results:
         risk_flags = ", ".join(r.risk_flags) if r.risk_flags else "-"
         lines.append(f"| {r.name} | {r.source} | {r.found_in} | {r.server_type} | {risk_flags} |")
-    
-    # Risk summary
-    with_risks = [r for r in results if r.risk_flags]
-    if with_risks:
+
+    # Findings & Remediation section
+    findings = _build_findings(results)
+    if findings:
         lines.extend([
             "",
-            "## Risk Summary",
+            "## Findings & Remediation",
             "",
         ])
-        for r in with_risks:
-            lines.append(f"- **{r.name}**: {', '.join(r.risk_flags)}")
-    
+
+        for finding in findings:
+            severity = finding["severity"].upper()
+            flag = finding["flag"]
+            mcps = ", ".join(finding["affected_mcps"])
+
+            lines.append(f"### [{severity}] {flag}")
+            lines.append("")
+            lines.append(f"**Affected MCPs:** {mcps}")
+            lines.append("")
+            lines.append(f"**Why:** {finding['explanation']}")
+            lines.append("")
+            lines.append(f"**Fix:** {finding['remediation']}")
+            lines.append("")
+
     return "\n".join(lines)
 
 

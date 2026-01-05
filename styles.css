@@ -780,6 +780,120 @@ footer a {
     }
 }
 
+/* Remediation Section */
+.remediation-section {
+    margin-top: 2rem;
+    border-top: 1px solid var(--border);
+    padding-top: 1.5rem;
+}
+
+.remediation-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    padding: 0.5rem 0;
+}
+
+.remediation-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text);
+}
+
+.toggle-icon {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.remediation-content {
+    margin-top: 1rem;
+}
+
+.remediation-content.collapsed {
+    display: none;
+}
+
+.finding-item {
+    border-radius: var(--radius);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid var(--border);
+}
+
+.finding-item.danger {
+    background: #fef2f2;
+    border-left-color: var(--danger);
+}
+
+.finding-item.warning {
+    background: #fffbeb;
+    border-left-color: var(--warning);
+}
+
+.finding-item.info {
+    background: #eff6ff;
+    border-left-color: var(--primary);
+}
+
+.finding-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.finding-header .badge {
+    font-size: 0.65rem;
+}
+
+.finding-header strong {
+    font-size: 0.95rem;
+}
+
+.mcp-count {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.finding-body p {
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.finding-body p strong {
+    color: var(--text);
+}
+
+.success-message {
+    color: var(--success);
+    font-weight: 500;
+}
+
+/* Tooltip styles for risk flags and levels */
+.has-tooltip {
+    cursor: help;
+    position: relative;
+}
+
+.has-tooltip:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--text);
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius);
+    font-size: 0.75rem;
+    white-space: pre-wrap;
+    max-width: 300px;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
 @media (max-width: 480px) {
     .source-tiles {
         grid-template-columns: repeat(2, 1fr);

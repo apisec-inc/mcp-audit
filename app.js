@@ -139,6 +139,84 @@ const KNOWN_MCPS = {
     "modelcontextprotocol": { provider: "MCP", type: "official", risk_level: "low", verified: true, description: "Core MCP Python library" },
 };
 
+// Risk Level Definitions for tooltips and remediation
+const RISK_LEVELS = {
+    "critical": {
+        definition: "MCP has capabilities that could lead to full system compromise if exploited.",
+        criteria: "Shell/command execution, root filesystem write access, or admin-level cloud credentials.",
+        remediation: "Remove unless absolutely required. If required, isolate in sandboxed environment.",
+    },
+    "high": {
+        definition: "MCP can access or modify sensitive data or systems.",
+        criteria: "Database access, cloud API access, filesystem write access, or credentials in config.",
+        remediation: "Restrict permissions to minimum required. Rotate any exposed credentials.",
+    },
+    "medium": {
+        definition: "MCP has elevated access but limited blast radius.",
+        criteria: "Third-party SaaS API access, read-only filesystem access, or network access.",
+        remediation: "Verify MCP is from trusted source. Ensure credentials are scoped appropriately.",
+    },
+    "low": {
+        definition: "MCP has minimal system access.",
+        criteria: "Read-only access to non-sensitive data or public APIs.",
+        remediation: "Verify MCP is from trusted source. No immediate action required.",
+    },
+    "unknown": {
+        definition: "Risk level could not be determined.",
+        criteria: "MCP not found in registry or insufficient information to assess.",
+        remediation: "Review MCP source code and capabilities manually before use.",
+    }
+};
+
+// Risk Flag Definitions for tooltips and remediation
+const RISK_FLAGS = {
+    "shell-access": {
+        explanation: "This MCP can execute shell commands on the host system. An attacker exploiting prompt injection could run arbitrary commands.",
+        remediation: "Remove shell access MCP unless absolutely required. If needed, restrict to specific allowed commands.",
+        severity: "critical"
+    },
+    "filesystem-access": {
+        explanation: "This MCP can read and/or write files on the host system. Could leak sensitive files or modify system configuration.",
+        remediation: "Restrict to specific directories. Use read-only mode if writes not required.",
+        severity: "high"
+    },
+    "database-access": {
+        explanation: "This MCP can query or modify database contents. Could leak sensitive data or corrupt records.",
+        remediation: "Use read-only credentials. Restrict to specific tables/schemas. Never use admin credentials.",
+        severity: "high"
+    },
+    "network-access": {
+        explanation: "This MCP can make outbound network requests. Could be used for data exfiltration.",
+        remediation: "Restrict to specific allowed domains/IPs. Monitor outbound traffic.",
+        severity: "medium"
+    },
+    "secrets-detected": {
+        explanation: "API keys, tokens, or passwords are visible in the MCP configuration file.",
+        remediation: "IMMEDIATELY rotate the exposed credential. Move secrets to environment variables.",
+        severity: "critical"
+    },
+    "secrets-in-env": {
+        explanation: "Environment variables in config appear to contain sensitive credentials.",
+        remediation: "Rotate credentials if exposed. Use a secrets manager where possible.",
+        severity: "high"
+    },
+    "unverified-source": {
+        explanation: "This MCP is not from a known/verified publisher. Its behavior and security posture are unknown.",
+        remediation: "Review the MCP source code before use. Prefer official or verified MCPs.",
+        severity: "medium"
+    },
+    "local-binary": {
+        explanation: "This MCP runs a local binary or script. Its behavior is determined by the local file.",
+        remediation: "Verify the integrity of the local binary. Ensure it has not been tampered with.",
+        severity: "medium"
+    },
+    "dependency-only": {
+        explanation: "This MCP was found as a dependency, not as an active configuration.",
+        remediation: "Verify the MCP is intentionally included and properly configured.",
+        severity: "low"
+    }
+};
+
 // Heuristic risk calculation for unknown MCPs
 function calculateHeuristicRisk(name, source, config) {
     let riskScore = 0;
@@ -852,13 +930,16 @@ function displayResults() {
                 </td>
                 <td>${r.isKnown ? '<span class="badge success">Yes</span>' : '<span class="badge danger">No</span>'}</td>
                 <td>${riskIndicator}</td>
-                <td>${r.riskFlags.length > 0 ? r.riskFlags.map(f => `<span class="risk-flag ${getRiskLevel(f)}">${f}</span>`).join(' ') : '<span class="text-muted">-</span>'}</td>
+                <td>${r.riskFlags.length > 0 ? r.riskFlags.map(f => `<span class="risk-flag ${getRiskLevel(f)} has-tooltip" title="${escapeHtml(getRiskFlagTooltip(f))}">${f}</span>`).join(' ') : '<span class="text-muted">-</span>'}</td>
             </tr>
         `;
     }).join('');
+
+    // Display remediation section
+    displayRemediationSection(scanResults);
 }
 
-// Get badge for registry risk level
+// Get badge for registry risk level with tooltip
 function getRegistryRiskBadge(risk) {
     const styles = {
         critical: 'danger',
@@ -867,17 +948,40 @@ function getRegistryRiskBadge(risk) {
         low: 'success',
         unknown: 'secondary',
     };
-    return `<span class="badge ${styles[risk] || 'secondary'}">${risk.toUpperCase()}</span>`;
+    const tooltip = getRiskLevelTooltip(risk);
+    return `<span class="badge ${styles[risk] || 'secondary'} has-tooltip" title="${escapeHtml(tooltip)}">${risk.toUpperCase()}</span>`;
 }
 
 // Get risk level for styling
 function getRiskLevel(flag) {
+    const flagInfo = RISK_FLAGS[flag];
+    if (flagInfo) {
+        return flagInfo.severity;
+    }
     const high = ['shell-access', 'unverified-source'];
     const medium = ['filesystem-access', 'database-access'];
-    
+
     if (high.includes(flag)) return 'high';
     if (medium.includes(flag)) return 'medium';
     return 'low';
+}
+
+// Get tooltip text for a risk flag
+function getRiskFlagTooltip(flag) {
+    const flagInfo = RISK_FLAGS[flag];
+    if (flagInfo) {
+        return `${flagInfo.explanation}\n\nFix: ${flagInfo.remediation}`;
+    }
+    return flag;
+}
+
+// Get tooltip text for a risk level
+function getRiskLevelTooltip(level) {
+    const levelInfo = RISK_LEVELS[level?.toLowerCase()];
+    if (levelInfo) {
+        return `${levelInfo.definition}\n\nCriteria: ${levelInfo.criteria}\n\nRemediation: ${levelInfo.remediation}`;
+    }
+    return level;
 }
 
 // Export results
@@ -981,4 +1085,93 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Build findings for remediation section
+function buildFindings(results) {
+    const flagToMcps = {};
+    for (const r of results) {
+        for (const flag of r.riskFlags) {
+            if (!flagToMcps[flag]) {
+                flagToMcps[flag] = [];
+            }
+            flagToMcps[flag].push(r.name);
+        }
+    }
+
+    const findings = [];
+    for (const [flag, mcps] of Object.entries(flagToMcps)) {
+        const flagInfo = RISK_FLAGS[flag] || {};
+        findings.push({
+            flag,
+            severity: flagInfo.severity || 'unknown',
+            mcps,
+            explanation: flagInfo.explanation || 'Unknown risk flag',
+            remediation: flagInfo.remediation || 'Review manually',
+        });
+    }
+
+    // Sort by severity
+    const severityOrder = { critical: 0, high: 1, medium: 2, low: 3, unknown: 4 };
+    findings.sort((a, b) => (severityOrder[a.severity] || 4) - (severityOrder[b.severity] || 4));
+
+    return findings;
+}
+
+// Display remediation section
+function displayRemediationSection(results) {
+    const remediationDiv = document.getElementById('remediation-section');
+    if (!remediationDiv) return;
+
+    const findings = buildFindings(results);
+
+    if (findings.length === 0) {
+        remediationDiv.innerHTML = `
+            <div class="remediation-header">
+                <h3>Findings & Remediation</h3>
+            </div>
+            <p class="success-message">No risk flags detected. All MCPs appear safe.</p>
+        `;
+        remediationDiv.classList.remove('hidden');
+        return;
+    }
+
+    const findingsHtml = findings.map(f => {
+        const severityClass = f.severity === 'critical' ? 'danger' : (f.severity === 'high' ? 'warning' : 'info');
+        return `
+            <div class="finding-item ${severityClass}">
+                <div class="finding-header">
+                    <span class="badge ${severityClass}">${f.severity.toUpperCase()}</span>
+                    <strong>${f.flag}</strong>
+                    <span class="mcp-count">(${f.mcps.length} MCP${f.mcps.length > 1 ? 's' : ''} affected)</span>
+                </div>
+                <div class="finding-body">
+                    <p><strong>Why:</strong> ${escapeHtml(f.explanation)}</p>
+                    <p><strong>Fix:</strong> ${escapeHtml(f.remediation)}</p>
+                    <p><strong>MCPs:</strong> ${f.mcps.map(m => escapeHtml(m)).join(', ')}</p>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    remediationDiv.innerHTML = `
+        <div class="remediation-header" onclick="toggleRemediation()">
+            <h3>Findings & Remediation</h3>
+            <span class="toggle-icon">▼</span>
+        </div>
+        <div class="remediation-content">
+            ${findingsHtml}
+        </div>
+    `;
+    remediationDiv.classList.remove('hidden');
+}
+
+// Toggle remediation section visibility
+function toggleRemediation() {
+    const content = document.querySelector('.remediation-content');
+    const icon = document.querySelector('.toggle-icon');
+    if (content && icon) {
+        content.classList.toggle('collapsed');
+        icon.textContent = content.classList.contains('collapsed') ? '▶' : '▼';
+    }
 }
