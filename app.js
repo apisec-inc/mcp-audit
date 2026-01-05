@@ -217,6 +217,204 @@ const RISK_FLAGS = {
     }
 };
 
+// Secret detection patterns for exposed credentials
+const SECRET_PATTERNS = {
+    // AWS
+    aws_access_key: {
+        pattern: /AKIA[0-9A-Z]{16}/,
+        description: "AWS Access Key ID",
+        severity: "critical",
+        rotation_url: "https://console.aws.amazon.com/iam/home#/security_credentials"
+    },
+    // GitHub
+    github_pat: {
+        pattern: /ghp_[0-9a-zA-Z]{36}/,
+        description: "GitHub Personal Access Token",
+        severity: "critical",
+        rotation_url: "https://github.com/settings/tokens"
+    },
+    github_oauth: {
+        pattern: /gho_[0-9a-zA-Z]{36}/,
+        description: "GitHub OAuth Access Token",
+        severity: "critical",
+        rotation_url: "https://github.com/settings/tokens"
+    },
+    // Stripe
+    stripe_live: {
+        pattern: /sk_live_[0-9a-zA-Z]{24,}/,
+        description: "Stripe Live Secret Key",
+        severity: "critical",
+        rotation_url: "https://dashboard.stripe.com/apikeys"
+    },
+    // Slack
+    slack_token: {
+        pattern: /xox[baprs]-[0-9a-zA-Z-]{10,}/,
+        description: "Slack Token",
+        severity: "high",
+        rotation_url: "https://api.slack.com/apps"
+    },
+    // OpenAI
+    openai_key: {
+        pattern: /sk-[0-9a-zA-Z]{48}/,
+        description: "OpenAI API Key",
+        severity: "high",
+        rotation_url: "https://platform.openai.com/api-keys"
+    },
+    openai_project_key: {
+        pattern: /sk-proj-[0-9a-zA-Z_-]{40,}/,
+        description: "OpenAI Project API Key",
+        severity: "high",
+        rotation_url: "https://platform.openai.com/api-keys"
+    },
+    // Anthropic
+    anthropic_key: {
+        pattern: /sk-ant-[0-9a-zA-Z-]{40,}/,
+        description: "Anthropic API Key",
+        severity: "high",
+        rotation_url: "https://console.anthropic.com/settings/keys"
+    },
+    // Google
+    google_api_key: {
+        pattern: /AIza[0-9A-Za-z-_]{35}/,
+        description: "Google API Key",
+        severity: "high",
+        rotation_url: "https://console.cloud.google.com/apis/credentials"
+    },
+    // Database connection strings
+    postgres_conn: {
+        pattern: /postgres(ql)?:\/\/[^:]+:[^@]+@[^/]+\/\w+/,
+        description: "PostgreSQL Connection String with Credentials",
+        severity: "critical",
+        rotation_url: null
+    },
+    mongodb_conn: {
+        pattern: /mongodb(\+srv)?:\/\/[^:]+:[^@]+@/,
+        description: "MongoDB Connection String with Credentials",
+        severity: "critical",
+        rotation_url: null
+    },
+    // Private keys
+    private_key: {
+        pattern: /-----BEGIN (RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY-----/,
+        description: "Private Key",
+        severity: "critical",
+        rotation_url: null
+    },
+    // SendGrid
+    sendgrid_key: {
+        pattern: /SG\.[0-9A-Za-z-_]{22}\.[0-9A-Za-z-_]{43}/,
+        description: "SendGrid API Key",
+        severity: "high",
+        rotation_url: "https://app.sendgrid.com/settings/api_keys"
+    },
+    // Discord
+    discord_token: {
+        pattern: /[MN][A-Za-z\d]{23,}\.[\w-]{6}\.[\w-]{27}/,
+        description: "Discord Bot Token",
+        severity: "high",
+        rotation_url: "https://discord.com/developers/applications"
+    },
+    // NPM
+    npm_token: {
+        pattern: /npm_[A-Za-z0-9]{36}/,
+        description: "NPM Access Token",
+        severity: "high",
+        rotation_url: "https://www.npmjs.com/settings/tokens"
+    }
+};
+
+// Placeholder patterns to skip (not real secrets)
+const PLACEHOLDER_PATTERNS = [
+    /^xxx+$/i,
+    /^your[_-]?(api[_-]?key|token|secret|password)/i,
+    /^changeme$/i,
+    /^replace[_-]?me$/i,
+    /^todo$/i,
+    /^example$/i,
+    /^test$/i,
+    /^dummy$/i,
+    /^fake$/i,
+    /^\*+$/,
+    /^<.*>$/,      // <your-api-key>
+    /^\[.*\]$/,    // [your-api-key]
+    /^\{.*\}$/,    // {your-api-key}
+    /^sk_test_/,   // Stripe test keys
+    /^pk_test_/,   // Stripe test public keys
+];
+
+// Mask a secret value for safe display
+function maskSecret(value) {
+    if (!value || value.length <= 12) {
+        return value ? value.slice(0, 2) + '*'.repeat(Math.max(0, value.length - 4)) + value.slice(-2) : '****';
+    }
+    return value.slice(0, 4) + '********' + value.slice(-4);
+}
+
+// Check if a value is a placeholder
+function isPlaceholder(value) {
+    if (!value) return true;
+    const valueLower = value.toLowerCase().trim();
+    return PLACEHOLDER_PATTERNS.some(pattern => pattern.test(valueLower));
+}
+
+// Detect secrets in environment variables
+function detectSecrets(env, mcpName) {
+    const secrets = [];
+    if (!env || typeof env !== 'object') return secrets;
+
+    for (const [key, value] of Object.entries(env)) {
+        if (typeof value !== 'string' || value.length < 8) continue;
+        if (isPlaceholder(value)) continue;
+        if (value.startsWith('$') || value.startsWith('${')) continue; // Env var reference
+
+        for (const [type, config] of Object.entries(SECRET_PATTERNS)) {
+            if (config.pattern.test(value)) {
+                secrets.push({
+                    type,
+                    description: config.description,
+                    severity: config.severity,
+                    env_key: key,
+                    value_masked: maskSecret(value),
+                    value_length: value.length,
+                    rotation_url: config.rotation_url,
+                    mcp_name: mcpName
+                });
+                break; // Don't double-count
+            }
+        }
+
+        // Generic detection for context-based secrets
+        const genericPatterns = [
+            { keys: ['API_KEY', 'APIKEY', 'API_SECRET'], desc: 'Potential API Key' },
+            { keys: ['PASSWORD', 'PASSWD', 'PWD', 'DB_PASS'], desc: 'Password' },
+            { keys: ['TOKEN', 'AUTH_TOKEN', 'ACCESS_TOKEN', 'BEARER'], desc: 'Authentication Token' },
+        ];
+
+        for (const gp of genericPatterns) {
+            const keyUpper = key.toUpperCase();
+            if (gp.keys.some(k => keyUpper.includes(k)) && value.length >= 16) {
+                // Check if not already detected
+                if (!secrets.find(s => s.env_key === key)) {
+                    secrets.push({
+                        type: 'generic',
+                        description: gp.desc,
+                        severity: 'medium',
+                        env_key: key,
+                        value_masked: maskSecret(value),
+                        value_length: value.length,
+                        rotation_url: null,
+                        mcp_name: mcpName,
+                        confidence: 'medium'
+                    });
+                }
+                break;
+            }
+        }
+    }
+
+    return secrets;
+}
+
 // Heuristic risk calculation for unknown MCPs
 function calculateHeuristicRisk(name, source, config) {
     let riskScore = 0;
@@ -872,6 +1070,25 @@ function displayResults() {
 
     resultsSection.classList.remove('hidden');
 
+    // Detect secrets in all scan results
+    const allSecrets = [];
+    for (const r of scanResults) {
+        const env = r.rawConfig?.env || {};
+        const secrets = detectSecrets(env, r.name);
+        r.secrets = secrets;
+        allSecrets.push(...secrets);
+
+        // Add secrets-detected risk flag if secrets found
+        if (secrets.length > 0 && !r.riskFlags.includes('secrets-detected')) {
+            r.riskFlags.push('secrets-detected');
+        }
+    }
+
+    // Display secrets alert banner if any secrets found
+    if (allSecrets.length > 0) {
+        displaySecretsAlert(allSecrets);
+    }
+
     // Summary
     const totalMcps = scanResults.length;
     const uniqueRepos = new Set(scanResults.map(r => r.repository)).size;
@@ -879,6 +1096,7 @@ function displayResults() {
     const knownMcps = scanResults.filter(r => r.isKnown).length;
     const unknownMcps = totalMcps - knownMcps;
     const criticalRisk = scanResults.filter(r => r.registryRisk === 'critical').length;
+    const withSecrets = scanResults.filter(r => r.secrets && r.secrets.length > 0).length;
 
     summary.innerHTML = `
         <div class="summary-item">
@@ -905,6 +1123,12 @@ function displayResults() {
             <div class="value">${withRisks}</div>
             <div class="label">With Risk Flags</div>
         </div>
+        ${withSecrets > 0 ? `
+        <div class="summary-item danger">
+            <div class="value">${withSecrets}</div>
+            <div class="label">With Secrets</div>
+        </div>
+        ` : ''}
     `;
 
     // Table with description and risk columns
@@ -1116,6 +1340,90 @@ function buildFindings(results) {
     });
 
     return findings;
+}
+
+// Display secrets alert banner
+function displaySecretsAlert(secrets) {
+    if (!secrets || secrets.length === 0) return;
+
+    // Count by severity
+    const critical = secrets.filter(s => s.severity === 'critical').length;
+    const high = secrets.filter(s => s.severity === 'high').length;
+    const medium = secrets.filter(s => s.severity === 'medium').length;
+
+    // Create or get secrets alert container
+    let alertDiv = document.getElementById('secrets-alert');
+    if (!alertDiv) {
+        alertDiv = document.createElement('div');
+        alertDiv.id = 'secrets-alert';
+        alertDiv.className = 'secrets-alert';
+        // Insert before summary
+        const summaryEl = document.getElementById('summary');
+        if (summaryEl) {
+            summaryEl.parentNode.insertBefore(alertDiv, summaryEl);
+        }
+    }
+
+    // Sort by severity
+    const severityOrder = { critical: 0, high: 1, medium: 2 };
+    const sortedSecrets = [...secrets].sort((a, b) =>
+        (severityOrder[a.severity] || 2) - (severityOrder[b.severity] || 2)
+    );
+
+    const secretsHtml = sortedSecrets.map(s => {
+        const severityClass = s.severity === 'critical' ? 'danger' : (s.severity === 'high' ? 'warning' : 'info');
+        const rotateLink = s.rotation_url
+            ? `<a href="${escapeHtml(s.rotation_url)}" target="_blank" class="rotate-link">Rotate Now</a>`
+            : '<span class="text-muted">Manual rotation</span>';
+
+        return `
+            <div class="secret-item ${severityClass}">
+                <div class="secret-header">
+                    <span class="badge ${severityClass}">${s.severity.toUpperCase()}</span>
+                    <strong>${escapeHtml(s.description)}</strong>
+                </div>
+                <div class="secret-details">
+                    <p><strong>Location:</strong> ${escapeHtml(s.mcp_name)} → <code>${escapeHtml(s.env_key)}</code></p>
+                    <p><strong>Value:</strong> <code>${escapeHtml(s.value_masked)}</code> (${s.value_length} chars)</p>
+                    <p><strong>Action:</strong> ${rotateLink}</p>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    const summaryParts = [];
+    if (critical) summaryParts.push(`<span class="text-danger">${critical} critical</span>`);
+    if (high) summaryParts.push(`<span class="text-warning">${high} high</span>`);
+    if (medium) summaryParts.push(`<span class="text-info">${medium} medium</span>`);
+
+    alertDiv.innerHTML = `
+        <div class="secrets-alert-header" onclick="toggleSecretsDetail()">
+            <div class="secrets-alert-title">
+                <span class="alert-icon">⚠️</span>
+                <strong>${secrets.length} SECRET(S) DETECTED - IMMEDIATE ACTION REQUIRED</strong>
+            </div>
+            <span class="toggle-icon">▼</span>
+        </div>
+        <div class="secrets-alert-summary">
+            ${summaryParts.join(' • ')}
+            <span class="text-muted"> - Rotate ALL exposed credentials before continuing</span>
+        </div>
+        <div id="secrets-detail" class="secrets-detail">
+            ${secretsHtml}
+        </div>
+    `;
+}
+
+// Toggle secrets detail visibility
+function toggleSecretsDetail() {
+    const detail = document.getElementById('secrets-detail');
+    const icon = document.querySelector('.secrets-alert .toggle-icon');
+    if (detail) {
+        detail.classList.toggle('expanded');
+        if (icon) {
+            icon.textContent = detail.classList.contains('expanded') ? '▲' : '▼';
+        }
+    }
 }
 
 // Display remediation section

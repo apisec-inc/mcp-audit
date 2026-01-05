@@ -918,6 +918,129 @@ footer a {
     border-bottom-color: var(--text);
 }
 
+/* Secrets Alert Banner */
+.secrets-alert {
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    border: 2px solid var(--danger);
+    border-radius: var(--radius);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.secrets-alert-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    background: var(--danger);
+    color: white;
+    cursor: pointer;
+}
+
+.secrets-alert-header:hover {
+    background: #dc2626;
+}
+
+.secrets-alert-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.alert-icon {
+    font-size: 1.25rem;
+}
+
+.toggle-icon {
+    font-size: 0.875rem;
+    transition: transform 0.2s;
+}
+
+.secrets-alert-summary {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.875rem;
+    border-bottom: 1px solid #fecaca;
+}
+
+.secrets-detail {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.secrets-detail.expanded {
+    max-height: 1000px;
+}
+
+.secret-item {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #fecaca;
+}
+
+.secret-item:last-child {
+    border-bottom: none;
+}
+
+.secret-item.danger {
+    background: #fef2f2;
+}
+
+.secret-item.warning {
+    background: #fffbeb;
+}
+
+.secret-item.info {
+    background: #f0f9ff;
+}
+
+.secret-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.secret-details {
+    font-size: 0.875rem;
+    padding-left: 0.5rem;
+}
+
+.secret-details p {
+    margin: 0.25rem 0;
+}
+
+.secret-details code {
+    background: rgba(0, 0, 0, 0.1);
+    padding: 0.125rem 0.375rem;
+    border-radius: 3px;
+    font-size: 0.8125rem;
+}
+
+.rotate-link {
+    color: var(--danger);
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+.rotate-link:hover {
+    color: #b91c1c;
+}
+
+.text-danger {
+    color: var(--danger);
+    font-weight: 600;
+}
+
+.text-warning {
+    color: var(--warning);
+    font-weight: 600;
+}
+
+.text-info {
+    color: var(--primary);
+    font-weight: 600;
+}
+
 @media (max-width: 480px) {
     .source-tiles {
         grid-template-columns: repeat(2, 1fr);

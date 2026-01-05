@@ -8,6 +8,31 @@ from pathlib import Path
 
 
 @dataclass
+class DetectedSecret:
+    """A detected secret in MCP configuration"""
+    type: str  # e.g., "aws_access_key", "github_pat"
+    description: str  # Human-readable description
+    severity: str  # critical, high, medium
+    env_key: str  # The environment variable key
+    value_masked: str  # Masked value for display
+    value_length: int  # Length of original value
+    confidence: str  # high, medium
+    rotation_url: Optional[str] = None  # URL to rotate the credential
+
+    def to_dict(self) -> dict:
+        return {
+            "type": self.type,
+            "description": self.description,
+            "severity": self.severity,
+            "env_key": self.env_key,
+            "value_masked": self.value_masked,
+            "value_length": self.value_length,
+            "confidence": self.confidence,
+            "rotation_url": self.rotation_url,
+        }
+
+
+@dataclass
 class ScanResult:
     """Result of scanning a single MCP configuration"""
     name: str
@@ -20,6 +45,7 @@ class ScanResult:
     env: dict[str, str] = field(default_factory=dict)  # Environment variables
     risk_flags: list[str] = field(default_factory=list)  # Identified risks
     raw_config: dict = field(default_factory=dict)  # Original config data
+    secrets: list = field(default_factory=list)  # Detected secrets (list of DetectedSecret)
     # Registry match fields
     is_known: bool = False  # Whether found in known MCP registry
     provider: Optional[str] = None  # Provider from registry
@@ -40,6 +66,9 @@ class ScanResult:
             "env": {k: v for k, v in self.env.items()},  # Sanitize env
             "risk_flags": self.risk_flags,
         }
+        # Add secrets if detected (always masked)
+        if self.secrets:
+            result["secrets"] = [s.to_dict() if hasattr(s, 'to_dict') else s for s in self.secrets]
         # Add registry info if available
         if self.is_known:
             result["registry"] = {
@@ -87,6 +116,17 @@ class ScanResult:
         # Identify risk flags
         risk_flags = _identify_risks(command, args, env, name)
 
+        # Detect secrets in environment variables
+        secrets = _detect_secrets_in_env(env, config_path, name)
+
+        # Add secrets-detected flag if secrets found
+        if secrets:
+            if "secrets-detected" not in risk_flags:
+                risk_flags.append("secrets-detected")
+            # Remove the weaker secrets-in-env flag if we have actual secrets
+            if "secrets-in-env" in risk_flags:
+                risk_flags.remove("secrets-in-env")
+
         # Add remote-mcp flag for URL-based MCPs
         if server_type == "remote":
             if "remote-mcp" not in risk_flags:
@@ -103,6 +143,7 @@ class ScanResult:
             env=env,
             risk_flags=risk_flags,
             raw_config=data,
+            secrets=secrets,
         )
 
 
@@ -255,5 +296,37 @@ def _identify_risks(command: str, args: list[str], env: dict, name: str) -> list
     # Check for local/unknown source
     if command and (command.startswith("./") or command.startswith("/")):
         risks.append("local-binary")
-    
+
     return risks
+
+
+def _detect_secrets_in_env(env: dict, config_path: str = None, mcp_name: str = None) -> list:
+    """
+    Detect secrets in MCP environment variables.
+    Returns list of DetectedSecret objects.
+    """
+    try:
+        from mcp_audit.data.secret_patterns import detect_secrets
+    except ImportError:
+        return []
+
+    if not env:
+        return []
+
+    raw_secrets = detect_secrets(env, config_path, mcp_name)
+
+    # Convert to DetectedSecret objects
+    secrets = []
+    for s in raw_secrets:
+        secrets.append(DetectedSecret(
+            type=s["type"],
+            description=s["description"],
+            severity=s["severity"],
+            env_key=s["env_key"],
+            value_masked=s["value_masked"],
+            value_length=s["value_length"],
+            confidence=s["confidence"],
+            rotation_url=s.get("rotation_url"),
+        ))
+
+    return secrets

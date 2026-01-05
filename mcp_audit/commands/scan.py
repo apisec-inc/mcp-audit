@@ -45,6 +45,12 @@ def scan_local(
     remediation: bool = typer.Option(
         False, "--remediation", "-r", help="Show detailed findings and remediation guidance"
     ),
+    secrets_only: bool = typer.Option(
+        False, "--secrets-only", help="Only show detected secrets, skip MCP inventory"
+    ),
+    no_secrets: bool = typer.Option(
+        False, "--no-secrets", help="Skip secrets detection entirely"
+    ),
 ):
     """
     Scan for MCP configurations on local machine or in a directory.
@@ -129,6 +135,33 @@ def scan_local(
         for r in results:
             r.enrich_from_registry()
 
+    # Clear secrets if --no-secrets flag
+    if no_secrets:
+        for r in results:
+            r.secrets = []
+            if "secrets-detected" in r.risk_flags:
+                r.risk_flags.remove("secrets-detected")
+
+    # Collect all secrets for display
+    all_secrets = []
+    for r in results:
+        for s in r.secrets:
+            secret_info = s.to_dict() if hasattr(s, 'to_dict') else s
+            secret_info["mcp_name"] = r.name
+            all_secrets.append(secret_info)
+
+    # Show secrets section FIRST if any detected (highest priority)
+    if all_secrets and not secrets_only:
+        _print_secrets_alert(all_secrets)
+
+    # If secrets-only mode, show secrets and return
+    if secrets_only:
+        if all_secrets:
+            _print_secrets_detail(all_secrets)
+        else:
+            console.print("\n[green]No secrets detected in MCP configurations.[/green]")
+        return
+
     # Output results
     if not results:
         console.print("\n[yellow]No MCP configurations found.[/yellow]")
@@ -193,6 +226,11 @@ def _print_table(results: list[ScanResult], trust_results: dict = None, with_reg
 
     table.add_column("Risk Flags", style="yellow")
 
+    # Check if any results have secrets
+    has_secrets = any(r.secrets for r in results)
+    if has_secrets:
+        table.add_column("Secrets", style="red")
+
     if trust_results:
         table.add_column("Trust", style="bold")
 
@@ -220,6 +258,21 @@ def _print_table(results: list[ScanResult], trust_results: dict = None, with_reg
             row.extend([known, provider, reg_risk])
 
         row.append(risk_flags)
+
+        # Add secrets column if any results have secrets
+        if has_secrets:
+            if r.secrets:
+                # Count by severity
+                critical = sum(1 for s in r.secrets if (s.severity if hasattr(s, 'severity') else s.get('severity')) == 'critical')
+                high = sum(1 for s in r.secrets if (s.severity if hasattr(s, 'severity') else s.get('severity')) == 'high')
+                if critical:
+                    row.append(f"[bold red]{critical} critical[/bold red]")
+                elif high:
+                    row.append(f"[yellow]{high} high[/yellow]")
+                else:
+                    row.append(f"{len(r.secrets)} found")
+            else:
+                row.append("-")
 
         if trust_results:
             trust_info = trust_results.get(r.name, {})
@@ -346,3 +399,84 @@ def _print_remediation(results: list[ScanResult]):
         console.print(f"  [dim]Fix:[/dim] {info.get('remediation', 'Review manually')}")
         console.print(f"  [dim]MCPs:[/dim] {', '.join(mcps)}")
         console.print()
+
+
+def _print_secrets_alert(secrets: list):
+    """Print prominent secrets alert banner"""
+    # Count by severity
+    critical = sum(1 for s in secrets if s.get("severity") == "critical")
+    high = sum(1 for s in secrets if s.get("severity") == "high")
+    medium = sum(1 for s in secrets if s.get("severity") == "medium")
+
+    console.print()
+    console.print("[bold red]" + "═" * 60 + "[/bold red]")
+    console.print(f"[bold red]⚠️  {len(secrets)} SECRET(S) DETECTED - IMMEDIATE ACTION REQUIRED[/bold red]")
+    console.print("[bold red]" + "═" * 60 + "[/bold red]")
+    console.print()
+
+    # Group by severity
+    severity_order = {"critical": 0, "high": 1, "medium": 2}
+    sorted_secrets = sorted(secrets, key=lambda x: severity_order.get(x.get("severity", "medium"), 2))
+
+    for s in sorted_secrets:
+        severity = s.get("severity", "medium").upper()
+        if severity == "CRITICAL":
+            severity_styled = f"[bold red]{severity}[/bold red]"
+        elif severity == "HIGH":
+            severity_styled = f"[bold yellow]{severity}[/bold yellow]"
+        else:
+            severity_styled = f"[blue]{severity}[/blue]"
+
+        console.print(f"[{severity_styled}] {s.get('description', 'Unknown secret')}")
+        console.print(f"  [dim]Location:[/dim] {s.get('mcp_name', 'unknown')} → env.{s.get('env_key', 'unknown')}")
+        console.print(f"  [dim]Value:[/dim] {s.get('value_masked', '****')} ({s.get('value_length', 0)} chars)")
+        if s.get("rotation_url"):
+            console.print(f"  [dim]Rotate:[/dim] {s.get('rotation_url')}")
+        console.print()
+
+    console.print("[bold red]" + "─" * 60 + "[/bold red]")
+    summary_parts = []
+    if critical:
+        summary_parts.append(f"[red]{critical} critical[/red]")
+    if high:
+        summary_parts.append(f"[yellow]{high} high[/yellow]")
+    if medium:
+        summary_parts.append(f"[blue]{medium} medium[/blue]")
+    console.print(f"[bold]Total: {len(secrets)} secrets ({', '.join(summary_parts)})[/bold]")
+    console.print("[bold yellow]Rotate ALL exposed credentials before continuing.[/bold yellow]")
+    console.print("[bold red]" + "─" * 60 + "[/bold red]")
+    console.print()
+
+
+def _print_secrets_detail(secrets: list):
+    """Print detailed secrets list (for --secrets-only mode)"""
+    console.print()
+    console.print("[bold]⚠️  SECRETS DETECTED[/bold]")
+    console.print("─" * 60)
+    console.print()
+
+    # Group by severity
+    severity_order = {"critical": 0, "high": 1, "medium": 2}
+    sorted_secrets = sorted(secrets, key=lambda x: severity_order.get(x.get("severity", "medium"), 2))
+
+    for s in sorted_secrets:
+        severity = s.get("severity", "medium").upper()
+        if severity == "CRITICAL":
+            severity_styled = f"[bold red]{severity}[/bold red]"
+        elif severity == "HIGH":
+            severity_styled = f"[bold yellow]{severity}[/bold yellow]"
+        else:
+            severity_styled = f"[blue]{severity}[/blue]"
+
+        console.print(f"[{severity_styled}] {s.get('description', 'Unknown secret')}")
+        console.print(f"  Location: {s.get('mcp_name', 'unknown')} → env.{s.get('env_key', 'unknown')}")
+        console.print(f"  Value: {s.get('value_masked', '****')} ({s.get('value_length', 0)} chars)")
+        if s.get("rotation_url"):
+            console.print(f"  Rotate: {s.get('rotation_url')}")
+        console.print()
+
+    console.print("─" * 60)
+    critical = sum(1 for s in secrets if s.get("severity") == "critical")
+    high = sum(1 for s in secrets if s.get("severity") == "high")
+    medium = sum(1 for s in secrets if s.get("severity") == "medium")
+    console.print(f"Total: {len(secrets)} secrets ({critical} critical, {high} high, {medium} medium)")
