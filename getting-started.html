@@ -9,121 +9,114 @@
         /* Additional styles for getting-started page */
         .hero {
             text-align: center;
-            padding: 2rem 0 3rem;
+            padding: 2.5rem 0 2rem;
         }
 
         .hero h1 {
-            font-size: 2.25rem;
-            margin-bottom: 1rem;
+            font-size: 1.75rem;
+            font-weight: 500;
+            margin-bottom: 0.75rem;
             color: var(--text);
+            letter-spacing: -0.01em;
         }
 
         .hero h1 span {
             color: var(--primary);
+            font-weight: 600;
         }
 
         .hero .subtitle {
-            font-size: 1.2rem;
+            font-size: 1.05rem;
             color: var(--text-muted);
-            max-width: 600px;
-            margin: 0 auto 2rem;
-        }
-
-        .cta-button {
-            display: inline-block;
-            padding: 1rem 2.5rem;
-            font-size: 1.1rem;
-            font-weight: 600;
-            background: var(--primary);
-            color: white;
-            border-radius: var(--radius);
-            text-decoration: none;
-            transition: all 0.2s;
-        }
-
-        .cta-button:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            max-width: 540px;
+            margin: 0 auto;
+            line-height: 1.6;
         }
 
         .demo-section {
-            max-width: 700px;
-            margin: 0 auto 3rem;
+            max-width: 640px;
+            margin: 0 auto 2.5rem;
         }
 
         .demo-card {
             background: var(--surface);
             border-radius: var(--radius);
+            border: 1px solid var(--border);
             padding: 2rem;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
 
         .demo-card h2 {
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
             color: var(--text);
         }
 
         .demo-card .demo-intro {
             color: var(--text-muted);
-            margin-bottom: 1.5rem;
+            margin-bottom: 1.75rem;
+            font-size: 0.95rem;
         }
 
         .demo-steps {
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
+            gap: 1.25rem;
         }
 
         .demo-step {
             display: flex;
-            gap: 1rem;
+            gap: 0.875rem;
             align-items: flex-start;
         }
 
         .step-number {
-            width: 36px;
-            height: 36px;
-            background: var(--primary);
-            color: white;
+            width: 28px;
+            height: 28px;
+            background: transparent;
+            color: var(--primary);
+            border: 1.5px solid var(--primary);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 600;
             flex-shrink: 0;
-            font-size: 1rem;
+            font-size: 0.85rem;
         }
 
         .step-content {
             flex: 1;
+            padding-top: 0.15rem;
         }
 
         .step-content h3 {
-            font-size: 1rem;
-            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 0.35rem;
             color: var(--text);
         }
 
         .step-content p {
             color: var(--text-muted);
             margin: 0;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
+            line-height: 1.5;
         }
 
         .token-box {
-            background: #1e293b;
-            color: #e2e8f0;
-            padding: 0.75rem 1rem;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            color: #475569;
+            padding: 0.625rem 0.875rem;
             border-radius: 6px;
-            font-family: monospace;
-            font-size: 0.85rem;
-            margin-top: 0.75rem;
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+            font-size: 0.8rem;
+            margin-top: 0.625rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 1rem;
+            gap: 0.75rem;
             word-break: break-all;
         }
 
@@ -133,38 +126,43 @@
         }
 
         .copy-btn {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 0.4rem 0.75rem;
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 0.35rem 0.625rem;
             border-radius: 4px;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
+            font-weight: 500;
             cursor: pointer;
             white-space: nowrap;
-            transition: background 0.2s;
+            transition: all 0.15s ease;
         }
 
         .copy-btn:hover {
-            background: var(--primary-dark);
+            background: var(--background);
+            border-color: var(--text-muted);
         }
 
         .copy-btn.copied {
-            background: var(--success);
+            background: #ecfdf5;
+            border-color: #10b981;
+            color: #059669;
         }
 
         .org-highlight {
-            background: #dbeafe;
-            color: #1e40af;
-            padding: 0.2rem 0.5rem;
+            background: #f1f5f9;
+            color: #334155;
+            padding: 0.15rem 0.4rem;
             border-radius: 4px;
             font-weight: 600;
+            font-size: 0.875rem;
         }
 
         .privacy-note {
             display: flex;
-            gap: 1.5rem;
-            margin-top: 2rem;
-            padding-top: 1.5rem;
+            gap: 1.25rem;
+            margin-top: 1.5rem;
+            padding-top: 1.25rem;
             border-top: 1px solid var(--border);
             flex-wrap: wrap;
         }
@@ -172,96 +170,108 @@
         .privacy-item {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 0.4rem;
             color: var(--text-muted);
-            font-size: 0.9rem;
+            font-size: 0.8rem;
         }
 
         .privacy-item svg {
-            color: var(--success);
+            color: #10b981;
             flex-shrink: 0;
+            opacity: 0.8;
         }
 
         .start-audit-btn {
-            display: block;
-            width: 100%;
-            padding: 1rem;
-            font-size: 1.1rem;
-            font-weight: 600;
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.95rem;
+            font-weight: 500;
             background: var(--primary);
             color: white;
             border: none;
             border-radius: var(--radius);
             cursor: pointer;
-            margin-top: 2rem;
-            transition: all 0.2s;
+            margin-top: 1.75rem;
+            transition: all 0.15s ease;
             text-align: center;
             text-decoration: none;
         }
 
         .start-audit-btn:hover {
             background: var(--primary-dark);
-            transform: translateY(-1px);
         }
 
         .what-youll-see {
-            background: var(--background);
+            background: #fafbfc;
+            border: 1px solid var(--border);
             border-radius: var(--radius);
-            padding: 1.25rem;
+            padding: 1rem 1.25rem;
             margin-top: 1.5rem;
         }
 
         .what-youll-see h4 {
-            font-size: 0.9rem;
-            margin-bottom: 0.75rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.6rem;
             color: var(--text);
         }
 
         .what-youll-see ul {
             margin: 0;
-            padding-left: 1.25rem;
+            padding-left: 1.1rem;
             color: var(--text-muted);
-            font-size: 0.9rem;
+            font-size: 0.85rem;
+            line-height: 1.6;
         }
 
         .what-youll-see li {
-            margin-bottom: 0.4rem;
+            margin-bottom: 0.25rem;
         }
 
         .next-steps {
-            max-width: 700px;
-            margin: 0 auto 3rem;
+            max-width: 640px;
+            margin: 0 auto 2.5rem;
         }
 
         .next-steps h2 {
-            font-size: 1.25rem;
-            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.875rem;
             color: var(--text);
         }
 
         .next-steps-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 0.875rem;
         }
 
         .next-step-card {
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: var(--radius);
-            padding: 1.25rem;
+            padding: 1.125rem;
         }
 
         .next-step-card h3 {
-            font-size: 1rem;
-            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
             color: var(--text);
         }
 
         .next-step-card p {
             color: var(--text-muted);
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             margin: 0;
+            line-height: 1.5;
+        }
+
+        .next-step-card code {
+            background: #f1f5f9;
+            padding: 0.1rem 0.3rem;
+            border-radius: 3px;
+            font-size: 0.8rem;
         }
 
     </style>
