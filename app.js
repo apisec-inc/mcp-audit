@@ -1354,6 +1354,84 @@ function buildFindings(results) {
     return findings;
 }
 
+// Get specific remediation steps for a secret type
+function getSecretRemediation(secret) {
+    const steps = [];
+    const type = secret.type;
+    const url = secret.rotation_url;
+
+    // Step 1: Rotate - specific to each provider
+    switch (type) {
+        case 'github_pat':
+        case 'github_oauth':
+            steps.push(`<a href="${url}" target="_blank" class="rotate-link">Go to GitHub Settings → Tokens</a> and delete this token, then create a new one`);
+            steps.push('Update your MCP config with the new token');
+            break;
+        case 'slack_token':
+            steps.push(`<a href="${url}" target="_blank" class="rotate-link">Go to Slack API → Your Apps</a> and regenerate the bot token`);
+            steps.push('Update SLACK_BOT_TOKEN in your MCP config');
+            break;
+        case 'openai_key':
+        case 'openai_project_key':
+            steps.push(`<a href="${url}" target="_blank" class="rotate-link">Go to OpenAI API Keys</a> and revoke this key, then create a new one`);
+            steps.push('Update OPENAI_API_KEY in your MCP config');
+            break;
+        case 'anthropic_key':
+            steps.push(`<a href="${url}" target="_blank" class="rotate-link">Go to Anthropic Console → API Keys</a> and delete this key, then create a new one`);
+            steps.push('Update ANTHROPIC_API_KEY in your MCP config');
+            break;
+        case 'aws_access_key':
+            steps.push(`<a href="${url}" target="_blank" class="rotate-link">Go to AWS IAM Console</a> and deactivate/delete this access key`);
+            steps.push('Create new access key and update AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY');
+            break;
+        case 'stripe_live':
+            steps.push(`<a href="${url}" target="_blank" class="rotate-link">Go to Stripe Dashboard → API Keys</a> and roll the secret key`);
+            steps.push('Update your MCP config with the new key (CRITICAL: This is a LIVE key!)');
+            break;
+        case 'postgres_conn':
+        case 'mongodb_conn':
+            steps.push('Change the database password immediately in your database admin console');
+            steps.push('Update the connection string in your MCP config with the new password');
+            steps.push('Review database access logs for unauthorized access');
+            break;
+        case 'private_key':
+            steps.push('Generate a new key pair and replace the compromised private key');
+            steps.push('Update any systems that use the corresponding public key');
+            steps.push('Revoke certificates associated with the old key');
+            break;
+        case 'sendgrid_key':
+            steps.push(`<a href="${url}" target="_blank" class="rotate-link">Go to SendGrid → API Keys</a> and delete this key`);
+            steps.push('Create a new API key with minimum required permissions');
+            break;
+        case 'discord_token':
+            steps.push(`<a href="${url}" target="_blank" class="rotate-link">Go to Discord Developer Portal</a> and regenerate the bot token`);
+            steps.push('Update your MCP config with the new token');
+            break;
+        case 'npm_token':
+            steps.push(`<a href="${url}" target="_blank" class="rotate-link">Go to npmjs.com → Access Tokens</a> and delete this token`);
+            steps.push('Create a new token with appropriate permissions');
+            break;
+        case 'google_api_key':
+            steps.push(`<a href="${url}" target="_blank" class="rotate-link">Go to Google Cloud Console → Credentials</a>`);
+            steps.push('Delete the compromised key and create a new one with API restrictions');
+            break;
+        default:
+            // Generic secret
+            if (url) {
+                steps.push(`<a href="${url}" target="_blank" class="rotate-link">Rotate this credential</a>`);
+            } else {
+                steps.push('Rotate this credential through your provider\'s console');
+            }
+            steps.push('Update your MCP configuration with the new value');
+    }
+
+    // Common final steps for all secrets in Git repos
+    steps.push('Remove the secret from the config file (use environment variables instead)');
+    steps.push('Scrub from Git history: <code>git filter-branch</code> or <a href="https://rtyley.github.io/bfg-repo-cleaner/" target="_blank">BFG Repo-Cleaner</a>');
+
+    return steps;
+}
+
 // Display secrets alert banner
 function displaySecretsAlert(secrets) {
     if (!secrets || secrets.length === 0) return;
@@ -1384,9 +1462,9 @@ function displaySecretsAlert(secrets) {
 
     const secretsHtml = sortedSecrets.map(s => {
         const severityClass = s.severity === 'critical' ? 'danger' : (s.severity === 'high' ? 'warning' : 'info');
-        const rotateLink = s.rotation_url
-            ? `<a href="${escapeHtml(s.rotation_url)}" target="_blank" class="rotate-link">1. Rotate credential</a>`
-            : '<span class="text-muted">1. Rotate credential manually</span>';
+
+        // Build specific remediation based on secret type
+        const remediation = getSecretRemediation(s);
 
         return `
             <div class="secret-item ${severityClass}">
@@ -1399,10 +1477,7 @@ function displaySecretsAlert(secrets) {
                     <p><strong>Value:</strong> <code>${escapeHtml(s.value_masked)}</code> (${s.value_length} chars)</p>
                     <p><strong>Remediation:</strong></p>
                     <ol class="remediation-steps">
-                        <li>${rotateLink}</li>
-                        <li>Remove from config file</li>
-                        <li>Scrub from Git history (use BFG or git filter-branch)</li>
-                        <li>Use environment variables or secrets manager</li>
+                        ${remediation.map(step => `<li>${step}</li>`).join('')}
                     </ol>
                 </div>
             </div>
