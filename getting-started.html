@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Get Started - APIsec MCP Audit</title>
-    <link rel="stylesheet" href="styles.css?v=9">
+    <link rel="stylesheet" href="styles.css?v=18">
     <style>
         /* Additional styles for getting-started page */
         .hero {
@@ -289,7 +289,7 @@
             <h1>Welcome to <span>APIsec MCP Audit</span></h1>
             <p class="subtitle">
                 Discover AI agent integrations (MCPs) across your GitHub repos.
-                Find unverified packages, overprivileged access, and secrets in config files.
+                Find exposed secrets, catalog API endpoints, and identify risky permissions.
             </p>
         </section>
 
@@ -342,10 +342,12 @@
                 <div class="what-youll-see">
                     <h4>What You'll See</h4>
                     <ul>
-                        <li>MCPs discovered across the demo repositories</li>
-                        <li>Risk flags: unknown sources, exposed secrets, risky permissions</li>
-                        <li>Registry verification status for each MCP</li>
-                        <li>Export options: JSON, CSV, Markdown</li>
+                        <li><strong>MCP Inventory:</strong> All MCPs discovered across repositories</li>
+                        <li><strong>Secrets Detection:</strong> Exposed API keys, tokens, passwords with rotation links</li>
+                        <li><strong>API Inventory:</strong> Database, REST, SSE, and cloud endpoints MCPs connect to</li>
+                        <li><strong>Risk Assessment:</strong> Registry verification and risk level for each MCP</li>
+                        <li><strong>Remediation:</strong> Step-by-step guidance to fix each finding</li>
+                        <li><strong>Export:</strong> JSON, CSV, Markdown reports</li>
                     </ul>
                 </div>
 
@@ -388,8 +390,8 @@
                 <div class="next-step-card">
                     <h3>Scan Locally with the CLI</h3>
                     <p>
-                        Download the CLI tool to scan your local machine for MCP configurations
-                        in Claude Desktop, Cursor, VS Code, and more.
+                        Download the CLI to scan local MCP configs in Claude Desktop, Cursor, VS Code.
+                        Use <code>--secrets-only</code> or <code>--apis-only</code> for focused scans.
                     </p>
                 </div>
             </div>
