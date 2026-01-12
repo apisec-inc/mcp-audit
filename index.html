@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>APIsec MCP Discovery and Audit</title>
-    <link rel="stylesheet" href="styles.css?v=18">
+    <link rel="stylesheet" href="styles.css?v=19">
 </head>
 <body>
     <div class="container">
@@ -273,8 +273,24 @@
                                 <code>mcp-audit scan</code>
                                 <div class="command-details">
                                     <p>Scans your local machine for all MCP server configurations.</p>
-                                    <p>Checks Claude Desktop, Cursor, VS Code, Windsurf, Zed, and project folders.</p>
-                                    <p>Displays a summary table showing each MCP found with its risk level.</p>
+                                    <p>Detects exposed secrets, catalogs API endpoints, and identifies risk flags.</p>
+                                    <p>Provides remediation guidance with provider-specific rotation links.</p>
+                                </div>
+                            </div>
+                            <div class="command">
+                                <code>mcp-audit scan --secrets-only</code>
+                                <div class="command-details">
+                                    <p>Shows only detected secrets (API keys, tokens, passwords) in your MCP configs.</p>
+                                    <p>Includes severity levels: Critical, High, Medium.</p>
+                                    <p>Each finding includes step-by-step remediation with rotation URLs.</p>
+                                </div>
+                            </div>
+                            <div class="command">
+                                <code>mcp-audit scan --apis-only</code>
+                                <div class="command-details">
+                                    <p>Shows the API inventory - all endpoints your MCPs connect to.</p>
+                                    <p>Categorizes by type: Database, REST API, SSE, SaaS, Cloud.</p>
+                                    <p>Credentials in URLs are automatically masked for safe display.</p>
                                 </div>
                             </div>
                             <div class="command">
@@ -325,6 +341,6 @@
         </footer>
     </div>
 
-    <script src="app.js?v=18"></script>
+    <script src="app.js?v=19"></script>
 </body>
 </html>
