@@ -47,6 +47,7 @@ class ScanResult:
     raw_config: dict = field(default_factory=dict)  # Original config data
     secrets: list = field(default_factory=list)  # Detected secrets (list of DetectedSecret)
     apis: list = field(default_factory=list)  # Detected API endpoints (list of DetectedAPI)
+    model: Optional[dict] = None  # Detected AI model (DetectedModel.to_dict())
     # Registry match fields
     is_known: bool = False  # Whether found in known MCP registry
     provider: Optional[str] = None  # Provider from registry
@@ -73,6 +74,9 @@ class ScanResult:
         # Add APIs if detected
         if self.apis:
             result["apis"] = [a.to_dict() if hasattr(a, 'to_dict') else a for a in self.apis]
+        # Add AI model if detected
+        if self.model:
+            result["model"] = self.model
         # Add registry info if available
         if self.is_known:
             result["registry"] = {
@@ -126,6 +130,9 @@ class ScanResult:
         # Detect API endpoints
         apis = _detect_apis_in_config(data, args, name)
 
+        # Detect AI model
+        model = _detect_model_in_config(env, apis, name)
+
         # Add secrets-detected flag if secrets found
         if secrets:
             if "secrets-detected" not in risk_flags:
@@ -152,6 +159,7 @@ class ScanResult:
             raw_config=data,
             secrets=secrets,
             apis=apis,
+            model=model,
         )
 
 
@@ -354,3 +362,33 @@ def _detect_apis_in_config(raw_config: dict, args: list, mcp_name: str) -> list:
         return []
 
     return detect_apis(raw_config, args, mcp_name)
+
+
+def _detect_model_in_config(env: dict, apis: list, mcp_name: str) -> Optional[dict]:
+    """
+    Detect AI model in MCP configuration.
+    Returns model dict or None.
+    """
+    try:
+        from mcp_audit.data.model_patterns import detect_model_from_config
+    except ImportError:
+        return None
+
+    if not env and not apis:
+        return None
+
+    # Convert API objects to dicts if needed
+    apis_list = []
+    if apis:
+        for a in apis:
+            if hasattr(a, 'to_dict'):
+                apis_list.append(a.to_dict())
+            elif isinstance(a, dict):
+                apis_list.append(a)
+            else:
+                apis_list.append({"url": str(a)})
+
+    detected = detect_model_from_config(env, apis_list, mcp_name)
+    if detected:
+        return detected.to_dict()
+    return None

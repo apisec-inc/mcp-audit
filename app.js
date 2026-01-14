@@ -439,6 +439,74 @@ const API_CATEGORY_INFO = {
     unknown: { name: "Other", icon: "❓", color: "#adb5bd" }
 };
 
+// AI Model detection patterns
+const MODEL_ENV_PATTERNS = [
+    'MODEL', 'MODEL_NAME', 'MODEL_ID', 'LLM_MODEL', 'AI_MODEL',
+    'OPENAI_MODEL', 'ANTHROPIC_MODEL', 'CLAUDE_MODEL', 'BEDROCK_MODEL_ID',
+    'AZURE_OPENAI_DEPLOYMENT', 'AZURE_DEPLOYMENT', 'OLLAMA_MODEL',
+    'TOGETHER_MODEL', 'GROQ_MODEL', 'MISTRAL_MODEL', 'GEMINI_MODEL'
+];
+
+// Known model identifiers
+const MODEL_IDENTIFIERS = {
+    // OpenAI
+    'gpt-4o': { name: 'GPT-4o', provider: 'OpenAI', hosting: 'cloud' },
+    'gpt-4o-mini': { name: 'GPT-4o Mini', provider: 'OpenAI', hosting: 'cloud' },
+    'gpt-4-turbo': { name: 'GPT-4 Turbo', provider: 'OpenAI', hosting: 'cloud' },
+    'gpt-4': { name: 'GPT-4', provider: 'OpenAI', hosting: 'cloud' },
+    'gpt-3.5-turbo': { name: 'GPT-3.5 Turbo', provider: 'OpenAI', hosting: 'cloud' },
+    'o1': { name: 'o1', provider: 'OpenAI', hosting: 'cloud' },
+    'o1-mini': { name: 'o1 Mini', provider: 'OpenAI', hosting: 'cloud' },
+    'o3-mini': { name: 'o3 Mini', provider: 'OpenAI', hosting: 'cloud' },
+    // Anthropic
+    'claude-3-5-sonnet': { name: 'Claude 3.5 Sonnet', provider: 'Anthropic', hosting: 'cloud' },
+    'claude-3.5-sonnet': { name: 'Claude 3.5 Sonnet', provider: 'Anthropic', hosting: 'cloud' },
+    'claude-3-5-haiku': { name: 'Claude 3.5 Haiku', provider: 'Anthropic', hosting: 'cloud' },
+    'claude-3-opus': { name: 'Claude 3 Opus', provider: 'Anthropic', hosting: 'cloud' },
+    'claude-3-sonnet': { name: 'Claude 3 Sonnet', provider: 'Anthropic', hosting: 'cloud' },
+    'claude-3-haiku': { name: 'Claude 3 Haiku', provider: 'Anthropic', hosting: 'cloud' },
+    // Meta Llama
+    'llama-3.3': { name: 'Llama 3.3', provider: 'Meta', hosting: 'local' },
+    'llama-3.2': { name: 'Llama 3.2', provider: 'Meta', hosting: 'local' },
+    'llama-3.1': { name: 'Llama 3.1', provider: 'Meta', hosting: 'local' },
+    'llama-3': { name: 'Llama 3', provider: 'Meta', hosting: 'local' },
+    'llama3': { name: 'Llama 3', provider: 'Meta', hosting: 'local' },
+    'codellama': { name: 'Code Llama', provider: 'Meta', hosting: 'local' },
+    // Mistral
+    'mistral-large': { name: 'Mistral Large', provider: 'Mistral AI', hosting: 'cloud' },
+    'mistral': { name: 'Mistral', provider: 'Mistral AI', hosting: 'local' },
+    'mixtral': { name: 'Mixtral', provider: 'Mistral AI', hosting: 'local' },
+    'codestral': { name: 'Codestral', provider: 'Mistral AI', hosting: 'cloud' },
+    // Google
+    'gemini-2.0': { name: 'Gemini 2.0', provider: 'Google', hosting: 'cloud' },
+    'gemini-1.5-pro': { name: 'Gemini 1.5 Pro', provider: 'Google', hosting: 'cloud' },
+    'gemini-1.5-flash': { name: 'Gemini 1.5 Flash', provider: 'Google', hosting: 'cloud' },
+    'gemini-pro': { name: 'Gemini Pro', provider: 'Google', hosting: 'cloud' },
+    'gemma-2': { name: 'Gemma 2', provider: 'Google', hosting: 'local' },
+    'gemma': { name: 'Gemma', provider: 'Google', hosting: 'local' },
+    // Others
+    'deepseek-v3': { name: 'DeepSeek V3', provider: 'DeepSeek', hosting: 'cloud' },
+    'deepseek-r1': { name: 'DeepSeek R1', provider: 'DeepSeek', hosting: 'cloud' },
+    'deepseek': { name: 'DeepSeek', provider: 'DeepSeek', hosting: 'local' },
+    'qwen-2.5': { name: 'Qwen 2.5', provider: 'Alibaba', hosting: 'local' },
+    'qwen': { name: 'Qwen', provider: 'Alibaba', hosting: 'local' },
+    'phi-4': { name: 'Phi-4', provider: 'Microsoft', hosting: 'local' },
+    'phi-3': { name: 'Phi-3', provider: 'Microsoft', hosting: 'local' },
+};
+
+// Provider display info for AI models
+const MODEL_PROVIDER_INFO = {
+    'OpenAI': { icon: '🤖', color: '#10a37f' },
+    'Anthropic': { icon: '🧠', color: '#d4a27f' },
+    'Google': { icon: '🔷', color: '#4285f4' },
+    'Meta': { icon: '🦙', color: '#0668e1' },
+    'Mistral AI': { icon: '🌬️', color: '#ff7000' },
+    'DeepSeek': { icon: '🔍', color: '#1e90ff' },
+    'Alibaba': { icon: '☁️', color: '#ff6a00' },
+    'Microsoft': { icon: '🪟', color: '#00a4ef' },
+    'Unknown': { icon: '❓', color: '#6c757d' },
+};
+
 // Placeholder patterns to skip (not real secrets)
 const PLACEHOLDER_PATTERNS = [
     /^xxx+$/i,
@@ -643,6 +711,97 @@ function detectApis(rawConfig, args, mcpName) {
     }
 
     return apis;
+}
+
+// Identify a model string and return its metadata
+function identifyModel(modelString) {
+    if (!modelString) return null;
+    const modelLower = modelString.toLowerCase().trim();
+
+    // Try exact match first
+    if (MODEL_IDENTIFIERS[modelLower]) {
+        return { ...MODEL_IDENTIFIERS[modelLower] };
+    }
+
+    // Try prefix match (for versioned models like 'gpt-4o-2024-08-06')
+    for (const [pattern, info] of Object.entries(MODEL_IDENTIFIERS)) {
+        if (modelLower.startsWith(pattern)) {
+            return { ...info };
+        }
+    }
+
+    // Try contains match (for models like 'anthropic.claude-3-5-sonnet-20241022-v2:0')
+    for (const [pattern, info] of Object.entries(MODEL_IDENTIFIERS)) {
+        if (modelLower.includes(pattern)) {
+            return { ...info };
+        }
+    }
+
+    // Infer from common patterns
+    if (modelLower.includes('llama')) {
+        return { name: modelString, provider: 'Meta', hosting: 'local' };
+    }
+    if (modelLower.includes('mistral') || modelLower.includes('mixtral')) {
+        return { name: modelString, provider: 'Mistral AI', hosting: 'local' };
+    }
+    if (modelLower.includes('claude')) {
+        return { name: modelString, provider: 'Anthropic', hosting: 'cloud' };
+    }
+    if (modelLower.includes('gpt')) {
+        return { name: modelString, provider: 'OpenAI', hosting: 'cloud' };
+    }
+    if (modelLower.includes('gemini') || modelLower.includes('gemma')) {
+        return { name: modelString, provider: 'Google', hosting: 'cloud' };
+    }
+    if (modelLower.includes('qwen')) {
+        return { name: modelString, provider: 'Alibaba', hosting: 'local' };
+    }
+    if (modelLower.includes('deepseek')) {
+        return { name: modelString, provider: 'DeepSeek', hosting: 'local' };
+    }
+
+    // Unknown model
+    return {
+        name: modelString,
+        provider: 'Unknown',
+        hosting: 'unknown'
+    };
+}
+
+// Detect AI model from MCP configuration
+function detectModel(rawConfig, mcpName) {
+    if (!rawConfig) return null;
+
+    const env = rawConfig.env || {};
+
+    // Check environment variables for model names
+    for (const [key, value] of Object.entries(env)) {
+        if (typeof value !== 'string' || !value) continue;
+        if (value.startsWith('$') || value.startsWith('${')) continue;
+
+        const keyUpper = key.toUpperCase();
+
+        // Check if this env var matches model patterns
+        const isModelKey = MODEL_ENV_PATTERNS.some(p =>
+            keyUpper.includes(p) || keyUpper.endsWith('_MODEL') || keyUpper.endsWith('_MODEL_ID')
+        );
+
+        if (isModelKey) {
+            const modelInfo = identifyModel(value);
+            if (modelInfo) {
+                return {
+                    modelId: value,
+                    modelName: modelInfo.name,
+                    provider: modelInfo.provider,
+                    hosting: modelInfo.hosting,
+                    source: `env:${key}`,
+                    mcpName: mcpName
+                };
+            }
+        }
+    }
+
+    return null;
 }
 
 // Extract all URLs from a text string
@@ -1370,6 +1529,21 @@ function displayResults() {
         displayApisInventory(allApis);
     }
 
+    // Detect AI models in all scan results
+    const allModels = [];
+    for (const r of scanResults) {
+        const model = detectModel(r.rawConfig, r.name);
+        if (model) {
+            r.model = model;
+            allModels.push(model);
+        }
+    }
+
+    // Display AI Models inventory if any found
+    if (allModels.length > 0) {
+        displayModelsInventory(allModels);
+    }
+
     // Summary
     const totalMcps = scanResults.length;
     const uniqueRepos = new Set(scanResults.map(r => r.repository)).size;
@@ -1410,10 +1584,30 @@ function displayResults() {
             <div class="label">With Secrets</div>
         </div>
         ` : ''}
+        ${allModels.length > 0 ? `
+        <div class="summary-item">
+            <div class="value">${allModels.length}</div>
+            <div class="label">AI Models</div>
+        </div>
+        ` : ''}
     `;
 
+    // Update table banner title with count
+    const tableBannerTitle = document.getElementById('table-banner-title');
+    if (tableBannerTitle) {
+        tableBannerTitle.textContent = `MCP DISCOVERY RESULTS - ${totalMcps} server(s) found`;
+    }
+
+    // Sort results by risk level (critical -> high -> medium -> low -> unknown)
+    const riskOrder = { critical: 0, high: 1, medium: 2, low: 3, unknown: 4 };
+    const sortedResults = [...scanResults].sort((a, b) => {
+        const riskA = riskOrder[a.registryRisk] ?? 4;
+        const riskB = riskOrder[b.registryRisk] ?? 4;
+        return riskA - riskB;
+    });
+
     // Table with description and risk columns
-    resultsBody.innerHTML = scanResults.map(r => {
+    resultsBody.innerHTML = sortedResults.map(r => {
         // Build risk indicator - show if heuristic was used
         const riskBadge = getRegistryRiskBadge(r.registryRisk);
         const riskIndicator = r.heuristicRisk
@@ -1442,6 +1636,9 @@ function displayResults() {
 
     // Display remediation section
     displayRemediationSection(scanResults);
+
+    // Show report section for PDF/email option
+    showReportSection();
 }
 
 // Get badge for registry risk level with tooltip
@@ -1764,7 +1961,7 @@ function displaySecretsAlert(secrets) {
                 <span class="alert-icon">⚠️</span>
                 <strong>${secrets.length} SECRET(S) DETECTED - IMMEDIATE ACTION REQUIRED</strong>
             </div>
-            <span class="toggle-icon">▼</span>
+            <span class="toggle-icon">▶</span>
         </div>
         <div class="secrets-alert-summary">
             ${summaryParts.join(' • ')}
@@ -1783,7 +1980,7 @@ function toggleSecretsDetail() {
     if (detail) {
         detail.classList.toggle('expanded');
         if (icon) {
-            icon.textContent = detail.classList.contains('expanded') ? '▲' : '▼';
+            icon.textContent = detail.classList.contains('expanded') ? '▼' : '▶';
         }
     }
 }
@@ -1852,11 +2049,11 @@ function displayApisInventory(apis) {
         <div class="apis-inventory-header" onclick="toggleApisInventory()">
             <div class="apis-inventory-title">
                 <span class="inventory-icon">📡</span>
-                <strong>API INVENTORY - ${apis.length} endpoint(s) discovered</strong>
+                <strong>ENDPOINTS DISCOVERED - ${apis.length} connection(s)</strong>
             </div>
-            <span class="toggle-icon">▼</span>
+            <span class="toggle-icon">▶</span>
         </div>
-        <div id="apis-detail" class="apis-detail expanded">
+        <div id="apis-detail" class="apis-detail">
             ${categoriesHtml}
         </div>
     `;
@@ -1869,7 +2066,112 @@ function toggleApisInventory() {
     if (detail) {
         detail.classList.toggle('expanded');
         if (icon) {
-            icon.textContent = detail.classList.contains('expanded') ? '▲' : '▼';
+            icon.textContent = detail.classList.contains('expanded') ? '▼' : '▶';
+        }
+    }
+}
+
+// Display AI Models inventory
+function displayModelsInventory(models) {
+    if (!models || models.length === 0) return;
+
+    // Group by provider
+    const byProvider = {};
+    for (const model of models) {
+        const provider = model.provider || 'Unknown';
+        if (!byProvider[provider]) byProvider[provider] = [];
+        byProvider[provider].push(model);
+    }
+
+    // Count by hosting
+    const byHosting = { cloud: 0, local: 0, unknown: 0 };
+    for (const model of models) {
+        const hosting = model.hosting || 'unknown';
+        if (hosting in byHosting) byHosting[hosting]++;
+    }
+
+    // Create or get models inventory container
+    let inventoryDiv = document.getElementById('models-inventory');
+    if (!inventoryDiv) {
+        inventoryDiv = document.createElement('div');
+        inventoryDiv.id = 'models-inventory';
+        inventoryDiv.className = 'models-inventory';
+        // Insert after APIs inventory (if exists) or after secrets alert or before summary
+        const apisInventory = document.getElementById('apis-inventory');
+        const secretsAlert = document.getElementById('secrets-alert');
+        const summaryEl = document.getElementById('summary');
+        if (apisInventory && apisInventory.parentNode) {
+            apisInventory.parentNode.insertBefore(inventoryDiv, apisInventory.nextSibling);
+        } else if (secretsAlert && secretsAlert.parentNode) {
+            secretsAlert.parentNode.insertBefore(inventoryDiv, secretsAlert.nextSibling);
+        } else if (summaryEl && summaryEl.parentNode) {
+            summaryEl.parentNode.insertBefore(inventoryDiv, summaryEl);
+        }
+    }
+
+    // Sort providers by count
+    const sortedProviders = Object.entries(byProvider).sort((a, b) => b[1].length - a[1].length);
+
+    let providersHtml = '';
+    for (const [provider, providerModels] of sortedProviders) {
+        const info = MODEL_PROVIDER_INFO[provider] || MODEL_PROVIDER_INFO.Unknown;
+        const barWidth = Math.min(providerModels.length * 4, 20);
+
+        const modelsHtml = providerModels.map(model => `
+            <div class="model-item">
+                <span class="model-name">${escapeHtml(model.modelName)}</span>
+                <span class="model-hosting ${model.hosting}">${model.hosting === 'cloud' ? '☁️ Cloud' : model.hosting === 'local' ? '🏠 Local' : '❓ Unknown'}</span>
+                <span class="model-mcp">(${escapeHtml(model.mcpName)})</span>
+            </div>
+        `).join('');
+
+        providersHtml += `
+            <div class="model-provider">
+                <div class="model-provider-header">
+                    <span class="model-icon">${info.icon}</span>
+                    <strong>${escapeHtml(provider)}</strong>
+                    <span class="model-bar" style="width: ${barWidth * 10}px; background: ${info.color}"></span>
+                    <span class="model-count">${providerModels.length}</span>
+                </div>
+                <div class="model-items">
+                    ${modelsHtml}
+                </div>
+            </div>
+        `;
+    }
+
+    // Hosting summary
+    const hostingHtml = `
+        <div class="model-hosting-summary">
+            <span class="hosting-label">By Hosting:</span>
+            ${byHosting.cloud > 0 ? `<span class="hosting-badge cloud">☁️ Cloud: ${byHosting.cloud}</span>` : ''}
+            ${byHosting.local > 0 ? `<span class="hosting-badge local">🏠 Local: ${byHosting.local}</span>` : ''}
+        </div>
+    `;
+
+    inventoryDiv.innerHTML = `
+        <div class="models-inventory-header" onclick="toggleModelsInventory()">
+            <div class="models-inventory-title">
+                <span class="inventory-icon">🤖</span>
+                <strong>AI MODELS - ${models.length} model(s) detected</strong>
+            </div>
+            <span class="toggle-icon">▶</span>
+        </div>
+        <div id="models-detail" class="models-detail">
+            ${hostingHtml}
+            ${providersHtml}
+        </div>
+    `;
+}
+
+// Toggle Models inventory visibility
+function toggleModelsInventory() {
+    const detail = document.getElementById('models-detail');
+    const icon = document.querySelector('.models-inventory .toggle-icon');
+    if (detail) {
+        detail.classList.toggle('expanded');
+        if (icon) {
+            icon.textContent = detail.classList.contains('expanded') ? '▼' : '▶';
         }
     }
 }
@@ -1883,10 +2185,17 @@ function displayRemediationSection(results) {
 
     if (findings.length === 0) {
         remediationDiv.innerHTML = `
-            <div class="remediation-header">
-                <h3>Findings & Remediation</h3>
+            <div class="findings-banner">
+                <div class="findings-banner-header">
+                    <div class="findings-banner-title">
+                        <span class="inventory-icon">🔍</span>
+                        <strong>FINDINGS & REMEDIATION</strong>
+                    </div>
+                </div>
+                <div class="findings-detail expanded">
+                    <p class="success-message" style="padding: 1rem 1.25rem;">✓ No risk flags detected. All MCPs appear safe.</p>
+                </div>
             </div>
-            <p class="success-message">No risk flags detected. All MCPs appear safe.</p>
         `;
         remediationDiv.classList.remove('hidden');
         return;
@@ -1910,13 +2219,22 @@ function displayRemediationSection(results) {
         `;
     }).join('');
 
+    const criticalCount = findings.filter(f => f.severity === 'critical').length;
+    const highCount = findings.filter(f => f.severity === 'high').length;
+    const countText = criticalCount > 0 ? `${criticalCount} critical, ${highCount} high` : `${findings.length} finding(s)`;
+
     remediationDiv.innerHTML = `
-        <div class="remediation-header" onclick="toggleRemediation()">
-            <h3>Findings & Remediation</h3>
-            <span class="toggle-icon">▼</span>
-        </div>
-        <div class="remediation-content">
-            ${findingsHtml}
+        <div class="findings-banner">
+            <div class="findings-banner-header" onclick="toggleRemediation()">
+                <div class="findings-banner-title">
+                    <span class="inventory-icon">🔍</span>
+                    <strong>FINDINGS & REMEDIATION - ${countText}</strong>
+                </div>
+                <span class="toggle-icon" id="findings-toggle-icon">▶</span>
+            </div>
+            <div class="findings-detail">
+                ${findingsHtml}
+            </div>
         </div>
     `;
     remediationDiv.classList.remove('hidden');
@@ -1924,11 +2242,31 @@ function displayRemediationSection(results) {
 
 // Toggle remediation section visibility
 function toggleRemediation() {
-    const content = document.querySelector('.remediation-content');
-    const icon = document.querySelector('.toggle-icon');
+    const content = document.querySelector('.findings-detail');
+    const icon = document.getElementById('findings-toggle-icon');
     if (content && icon) {
-        content.classList.toggle('collapsed');
-        icon.textContent = content.classList.contains('collapsed') ? '▶' : '▼';
+        content.classList.toggle('expanded');
+        icon.textContent = content.classList.contains('expanded') ? '▼' : '▶';
+    }
+}
+
+// Toggle export section visibility
+function toggleExportSection() {
+    const detail = document.getElementById('export-detail');
+    const icon = document.getElementById('export-toggle-icon');
+    if (detail && icon) {
+        detail.classList.toggle('expanded');
+        icon.textContent = detail.classList.contains('expanded') ? '▼' : '▶';
+    }
+}
+
+// Toggle table section visibility
+function toggleTableSection() {
+    const detail = document.getElementById('table-detail');
+    const icon = document.getElementById('table-toggle-icon');
+    if (detail && icon) {
+        detail.classList.toggle('expanded');
+        icon.textContent = detail.classList.contains('expanded') ? '▼' : '▶';
     }
 }
 
@@ -2003,4 +2341,412 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initTooltips);
 } else {
     initTooltips();
+}
+
+// ============================================
+// Lead Capture & PDF Report Functions
+// ============================================
+
+// Backend endpoint for lead capture
+const LEAD_CAPTURE_URL = 'https://apisec.ai/api/mcp-leads';
+
+// Validate email format
+function validateEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+}
+
+// Build scan summary for sending (no actual secret values)
+function buildScanSummary() {
+    const totalMcps = scanResults.length;
+    const knownMcps = scanResults.filter(r => r.isKnown).length;
+    const unknownMcps = totalMcps - knownMcps;
+    const criticalRisk = scanResults.filter(r => r.registryRisk === 'critical').length;
+    const highRisk = scanResults.filter(r => r.registryRisk === 'high').length;
+    const mediumRisk = scanResults.filter(r => r.registryRisk === 'medium').length;
+    const lowRisk = scanResults.filter(r => r.registryRisk === 'low').length;
+
+    // Count secrets by severity (no values)
+    const allSecrets = scanResults.flatMap(r => r.secrets || []);
+    const secretsBySeverity = {
+        critical: allSecrets.filter(s => s.severity === 'critical').length,
+        high: allSecrets.filter(s => s.severity === 'high').length,
+        medium: allSecrets.filter(s => s.severity === 'medium').length
+    };
+
+    // Count APIs by category
+    const allApis = scanResults.flatMap(r => r.apis || []);
+    const apisByCategory = {};
+    for (const api of allApis) {
+        const cat = api.category || 'unknown';
+        apisByCategory[cat] = (apisByCategory[cat] || 0) + 1;
+    }
+
+    // Risk flags summary
+    const riskFlagCounts = {};
+    for (const r of scanResults) {
+        for (const flag of (r.riskFlags || [])) {
+            riskFlagCounts[flag] = (riskFlagCounts[flag] || 0) + 1;
+        }
+    }
+
+    return {
+        scan_time: new Date().toISOString(),
+        source: 'web_app',
+        totals: {
+            mcps: totalMcps,
+            known: knownMcps,
+            unknown: unknownMcps,
+            repositories: new Set(scanResults.map(r => r.repository)).size
+        },
+        risk_levels: {
+            critical: criticalRisk,
+            high: highRisk,
+            medium: mediumRisk,
+            low: lowRisk
+        },
+        secrets: {
+            total: allSecrets.length,
+            by_severity: secretsBySeverity
+        },
+        apis: {
+            total: allApis.length,
+            by_category: apisByCategory
+        },
+        risk_flags: riskFlagCounts,
+        // MCP list (names only, no secrets)
+        mcps: scanResults.map(r => ({
+            name: r.name,
+            source: r.source,
+            repository: r.repository,
+            is_known: r.isKnown,
+            risk_level: r.registryRisk,
+            risk_flags: r.riskFlags
+        }))
+    };
+}
+
+// Send report to email via backend
+async function sendReportToEmail(email) {
+    const statusEl = document.getElementById('report-status');
+    const sendBtn = document.getElementById('send-report-btn');
+    const emailInput = document.getElementById('report-email');
+
+    // Validate email
+    if (!validateEmail(email)) {
+        statusEl.className = 'report-status error';
+        statusEl.textContent = 'Please enter a valid email address.';
+        emailInput.classList.add('error');
+        return false;
+    }
+
+    emailInput.classList.remove('error');
+
+    // Show loading state
+    sendBtn.classList.add('loading');
+    sendBtn.disabled = true;
+    statusEl.className = 'report-status loading';
+    statusEl.textContent = 'Sending report...';
+
+    try {
+        const summary = buildScanSummary();
+
+        const response = await fetch(LEAD_CAPTURE_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                email: email,
+                scan_summary: summary
+            })
+        });
+
+        if (response.ok) {
+            statusEl.className = 'report-status success';
+            statusEl.textContent = 'Report sent! Check your inbox shortly.';
+            trackEvent({ event: 'lead_capture', source: 'web_app', method: 'email' });
+            return true;
+        } else {
+            throw new Error('Failed to send report');
+        }
+    } catch (error) {
+        statusEl.className = 'report-status error';
+        statusEl.textContent = 'Failed to send report. Please try again.';
+        console.error('Lead capture error:', error);
+        return false;
+    } finally {
+        sendBtn.classList.remove('loading');
+        sendBtn.disabled = false;
+    }
+}
+
+// Export results as JSON (for CI/CD)
+function exportResultsJson() {
+    const data = {
+        scan_time: new Date().toISOString(),
+        source: 'web_app',
+        mcps: scanResults.map(r => ({
+            name: r.name,
+            source: r.source,
+            repository: r.repository,
+            is_known: r.isKnown,
+            registry_risk: r.registryRisk,
+            risk_flags: r.riskFlags,
+            secrets_count: (r.secrets || []).length,
+            apis_count: (r.apis || []).length
+        })),
+        summary: buildScanSummary()
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mcp-audit-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    trackEvent({ event: 'export_json', source: 'web_app' });
+}
+
+// Export results as CSV (for spreadsheets)
+function exportResultsCsv() {
+    const headers = ['Name', 'Source', 'Repository', 'Known', 'Risk Level', 'Risk Flags', 'Secrets Count', 'APIs Count'];
+    const rows = scanResults.map(r => [
+        r.name,
+        r.source,
+        r.repository,
+        r.isKnown ? 'Yes' : 'No',
+        r.registryRisk || 'unknown',
+        (r.riskFlags || []).join('; '),
+        (r.secrets || []).length,
+        (r.apis || []).length
+    ]);
+
+    const csvContent = [headers, ...rows]
+        .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mcp-audit-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    trackEvent({ event: 'export_csv', source: 'web_app' });
+}
+
+// Export results as CycloneDX AI-BOM (for supply chain security)
+function exportResultsCycloneDX() {
+    const serialNumber = `urn:uuid:${crypto.randomUUID()}`;
+    const timestamp = new Date().toISOString();
+
+    // Collect AI models
+    const modelComponents = [];
+    const mcpComponents = [];
+    const dependencies = [];
+
+    for (const r of scanResults) {
+        const mcpRef = `mcp:${r.name}`;
+
+        // Add MCP component
+        mcpComponents.push({
+            type: "application",
+            "bom-ref": mcpRef,
+            name: r.name,
+            supplier: { name: r.provider || "Unknown" },
+            description: r.description || `MCP server (${r.sourceType || 'unknown'})`,
+            properties: [
+                { name: "source", value: r.source },
+                { name: "server_type", value: r.sourceType || "unknown" },
+                { name: "found_in", value: r.repository || "unknown" },
+                { name: "registry_known", value: String(r.isKnown) },
+                { name: "registry_risk", value: r.registryRisk || "unknown" },
+                { name: "risk_flags", value: (r.riskFlags || []).join(",") }
+            ]
+        });
+
+        // Add model if detected
+        if (r.model) {
+            const modelRef = `model:${r.model.provider.toLowerCase().replace(/ /g, '-')}:${r.model.modelId}`;
+
+            modelComponents.push({
+                type: "machine-learning-model",
+                "bom-ref": modelRef,
+                name: r.model.modelName,
+                version: extractModelVersion(r.model.modelId),
+                supplier: { name: r.model.provider },
+                description: `AI model used by ${r.name} MCP`,
+                properties: [
+                    { name: "hosting", value: r.model.hosting },
+                    { name: "source", value: r.model.source },
+                    { name: "mcp", value: r.name }
+                ],
+                modelCard: {
+                    modelArchitecture: inferModelArchitecture(r.model.modelName, r.model.provider),
+                    modelParameters: {
+                        task: inferModelTask(r.model.modelName)
+                    }
+                }
+            });
+
+            dependencies.push({
+                ref: modelRef,
+                dependsOn: [mcpRef]
+            });
+        }
+    }
+
+    const bom = {
+        "$schema": "http://cyclonedx.org/schema/bom-1.6.schema.json",
+        bomFormat: "CycloneDX",
+        specVersion: "1.6",
+        serialNumber: serialNumber,
+        version: 1,
+        metadata: {
+            timestamp: timestamp,
+            tools: {
+                components: [{
+                    type: "application",
+                    name: "mcp-audit",
+                    publisher: "APIsec",
+                    version: "0.1.0",
+                    description: "MCP configuration security audit tool"
+                }]
+            },
+            component: {
+                type: "application",
+                name: "mcp-environment",
+                description: "MCP-enabled AI development environment"
+            }
+        },
+        components: [...modelComponents, ...mcpComponents],
+        dependencies: dependencies
+    };
+
+    const jsonString = JSON.stringify(bom, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mcp-audit-ai-bom-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    trackEvent({ event: 'export_cyclonedx', source: 'web_app' });
+}
+
+// Helper: Extract version from model ID
+function extractModelVersion(modelId) {
+    if (!modelId) return "latest";
+    const parts = modelId.split("-");
+    for (const part of parts) {
+        if (part.length === 8 && /^\d+$/.test(part)) {
+            return `${part.slice(0,4)}-${part.slice(4,6)}-${part.slice(6)}`;
+        }
+    }
+    return "latest";
+}
+
+// Helper: Infer model architecture
+function inferModelArchitecture(modelName, provider) {
+    const name = (modelName || '').toLowerCase();
+    if (name.includes('llama')) return "Llama Transformer";
+    if (name.includes('mistral') || name.includes('mixtral')) return "Mistral Architecture";
+    if (name.includes('gpt') || provider === 'OpenAI') return "GPT Transformer";
+    if (name.includes('claude') || provider === 'Anthropic') return "Constitutional AI";
+    if (name.includes('gemini') || name.includes('gemma')) return "Gemini Architecture";
+    return "Transformer";
+}
+
+// Helper: Infer model task
+function inferModelTask(modelName) {
+    const name = (modelName || '').toLowerCase();
+    if (name.includes('code')) return "code-generation";
+    if (name.includes('embed')) return "text-embedding";
+    if (name.includes('vision') || name.includes('image')) return "image-understanding";
+    return "text-generation";
+}
+
+// Show the report section when results are available
+function showReportSection() {
+    const reportSection = document.getElementById('report-section');
+    if (reportSection && scanResults.length > 0) {
+        reportSection.style.display = 'block';
+    }
+}
+
+// Hide the report section
+function hideReportSection() {
+    const reportSection = document.getElementById('report-section');
+    if (reportSection) {
+        reportSection.style.display = 'none';
+    }
+}
+
+// Initialize report section event listeners
+function initReportSection() {
+    const sendBtn = document.getElementById('send-report-btn');
+    const emailInput = document.getElementById('report-email');
+    const exportJsonBtn = document.getElementById('export-json-btn');
+    const exportCsvBtn = document.getElementById('export-csv-btn');
+
+    if (sendBtn) {
+        sendBtn.addEventListener('click', () => {
+            const email = emailInput?.value?.trim() || '';
+            sendReportToEmail(email);
+        });
+    }
+
+    // Export buttons in report section
+    if (exportJsonBtn) {
+        exportJsonBtn.addEventListener('click', () => {
+            exportResultsJson();
+        });
+    }
+
+    if (exportCsvBtn) {
+        exportCsvBtn.addEventListener('click', () => {
+            exportResultsCsv();
+        });
+    }
+
+    const exportCycloneDxBtn = document.getElementById('export-cyclonedx-btn');
+    if (exportCycloneDxBtn) {
+        exportCycloneDxBtn.addEventListener('click', () => {
+            exportResultsCycloneDX();
+        });
+    }
+
+    // Clear error state on input
+    if (emailInput) {
+        emailInput.addEventListener('input', () => {
+            emailInput.classList.remove('error');
+            const statusEl = document.getElementById('report-status');
+            if (statusEl && statusEl.classList.contains('error')) {
+                statusEl.className = 'report-status';
+            }
+        });
+
+        // Allow Enter key to submit
+        emailInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const email = emailInput.value?.trim() || '';
+                sendReportToEmail(email);
+            }
+        });
+    }
+
+    // Initially hide report section
+    hideReportSection();
+}
+
+// Initialize report section when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initReportSection);
+} else {
+    initReportSection();
 }

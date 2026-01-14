@@ -394,7 +394,7 @@ header .header-link a:hover {
     color: #f87171;
 }
 
-/* Summary */
+/* Summary - Neutral stat cards with black numbers */
 .summary-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -403,34 +403,36 @@ header .header-link a:hover {
 }
 
 .summary-item {
-    background: var(--background);
+    background: white;
     padding: 1rem;
     border-radius: var(--radius);
     text-align: center;
+    border: 1px solid #e5e7eb;
+    transition: box-shadow 0.2s;
+}
+
+.summary-item:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .summary-item .value {
-    font-size: 1.75rem;
-    font-weight: bold;
-    color: var(--primary);
+    font-size: 2rem;
+    font-weight: 700;
+    color: #111827;
 }
 
 .summary-item .label {
-    font-size: 0.75rem;
-    color: var(--text-muted);
+    font-size: 0.7rem;
+    color: #6b7280;
     text-transform: uppercase;
+    letter-spacing: 0.025em;
 }
 
-.summary-item.warning .value {
-    color: var(--warning);
-}
-
-.summary-item.danger .value {
-    color: var(--danger);
-}
-
+/* Remove colored number variants - all numbers are black now */
+.summary-item.warning .value,
+.summary-item.danger .value,
 .summary-item.success .value {
-    color: var(--success);
+    color: #111827;
 }
 
 /* Table */
@@ -807,36 +809,7 @@ footer a {
 
 /* Remediation Section */
 .remediation-section {
-    margin-top: 2rem;
-    border-top: 1px solid var(--border);
-    padding-top: 1.5rem;
-}
-
-.remediation-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    cursor: pointer;
-    padding: 0.5rem 0;
-}
-
-.remediation-header h3 {
-    margin: 0;
-    font-size: 1.1rem;
-    color: var(--text);
-}
-
-.toggle-icon {
-    color: var(--text-muted);
-    font-size: 0.9rem;
-}
-
-.remediation-content {
-    margin-top: 1rem;
-}
-
-.remediation-content.collapsed {
-    display: none;
+    margin-top: 1.5rem;
 }
 
 .finding-item {
@@ -932,10 +905,11 @@ footer a {
     border-bottom-color: var(--text);
 }
 
-/* Secrets Alert Banner */
+/* Secrets Alert Banner - RED (Critical action required) */
 .secrets-alert {
-    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-    border: 2px solid var(--danger);
+    background: #fee2e2;
+    border: 1px solid #fca5a5;
+    border-left: 4px solid #dc2626;
     border-radius: var(--radius);
     margin-bottom: 1.5rem;
     overflow: hidden;
@@ -945,10 +919,11 @@ footer a {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 1.25rem;
+    padding: 0.6rem 1rem;
     background: var(--danger);
     color: white;
     cursor: pointer;
+    font-size: 0.85rem;
 }
 
 .secrets-alert-header:hover {
@@ -968,6 +943,15 @@ footer a {
 .toggle-icon {
     font-size: 0.875rem;
     transition: transform 0.2s;
+    color: inherit;
+}
+
+/* Neutral section toggle icons */
+.table-banner-header .toggle-icon,
+.apis-inventory-header .toggle-icon,
+.models-inventory-header .toggle-icon,
+.export-banner-header .toggle-icon {
+    color: #6b7280;
 }
 
 .secrets-alert-summary {
@@ -1075,10 +1059,10 @@ footer a {
     font-weight: 600;
 }
 
-/* API Inventory Section */
+/* API/Endpoints Inventory Section (Neutral Theme) */
 .apis-inventory {
-    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-    border: 1px solid #7dd3fc;
+    background: white;
+    border: 1px solid #e5e7eb;
     border-radius: 8px;
     margin-bottom: 1.5rem;
     overflow: hidden;
@@ -1088,14 +1072,16 @@ footer a {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 1.25rem;
-    background: linear-gradient(90deg, #0ea5e9 0%, #06b6d4 100%);
-    color: white;
+    padding: 0.6rem 1rem;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    color: #374151;
     cursor: pointer;
+    font-size: 0.85rem;
 }
 
 .apis-inventory-header:hover {
-    background: linear-gradient(90deg, #0284c7 0%, #0891b2 100%);
+    background: #f3f4f6;
 }
 
 .apis-inventory-title {
@@ -1120,7 +1106,7 @@ footer a {
 
 .api-category {
     padding: 0.75rem 1.25rem;
-    border-bottom: 1px solid #7dd3fc;
+    border-bottom: 1px solid #e5e7eb;
 }
 
 .api-category:last-child {
@@ -1133,7 +1119,8 @@ footer a {
     gap: 0.5rem;
     margin-bottom: 0.5rem;
     font-size: 0.875rem;
-    color: #0369a1;
+    color: #374151;
+    font-weight: 600;
 }
 
 .api-icon {
@@ -1160,7 +1147,7 @@ footer a {
 
 .api-mcp {
     font-weight: 600;
-    color: #0369a1;
+    color: #374151;
 }
 
 .api-arrow {
@@ -1180,6 +1167,296 @@ footer a {
 .api-source {
     color: #64748b;
     font-size: 0.75rem;
+}
+
+/* AI Models Inventory (Neutral Theme) */
+.models-inventory {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.models-inventory-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 1rem;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    color: #374151;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.models-inventory-header:hover {
+    background: #f3f4f6;
+}
+
+.models-inventory-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.models-detail {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.models-detail.expanded {
+    max-height: 1000px;
+}
+
+.model-hosting-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: white;
+}
+
+.hosting-label {
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.875rem;
+}
+
+.hosting-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.hosting-badge.cloud {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.hosting-badge.local {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.model-provider {
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.model-provider:last-child {
+    border-bottom: none;
+}
+
+.model-provider-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    color: #374151;
+    font-weight: 600;
+}
+
+.model-icon {
+    font-size: 1rem;
+}
+
+.model-bar {
+    height: 8px;
+    border-radius: 4px;
+    min-width: 8px;
+}
+
+.model-count {
+    color: #64748b;
+    font-weight: 600;
+    margin-left: auto;
+}
+
+.model-items {
+    padding-left: 1.5rem;
+}
+
+.model-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+    font-size: 0.8125rem;
+    flex-wrap: wrap;
+}
+
+.model-name {
+    font-weight: 600;
+    color: #374151;
+}
+
+.model-hosting {
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+}
+
+.model-hosting.cloud {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.model-hosting.local {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.model-hosting.unknown {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.model-mcp {
+    color: #64748b;
+    font-size: 0.75rem;
+}
+
+/* Findings Banner - ORANGE (Warning, attention needed) */
+.findings-banner {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-left: 4px solid #ea580c;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.findings-banner-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 1rem;
+    background: #ea580c;
+    color: white;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.findings-banner-header:hover {
+    background: #c2410c;
+}
+
+.findings-banner-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.findings-detail {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.findings-detail.expanded {
+    max-height: 2000px;
+}
+
+.findings-detail .finding-item {
+    margin: 0.75rem 1.25rem;
+}
+
+/* MCP Discovery Table Banner (Neutral Theme) */
+.table-banner {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.table-banner-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 1rem;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    color: #374151;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.table-banner-header:hover {
+    background: #f3f4f6;
+}
+
+.table-banner-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.table-detail {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.table-detail.expanded {
+    max-height: 5000px;
+}
+
+.table-detail .table-container {
+    margin-bottom: 0;
+}
+
+/* Export Banner (Neutral Theme) */
+.export-banner {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.export-banner-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 1rem;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    color: #374151;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.export-banner-header:hover {
+    background: #f3f4f6;
+}
+
+.export-banner-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.export-detail {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.export-detail.expanded {
+    max-height: 2000px;
+}
+
+.export-detail-content {
+    padding: 1rem 1.25rem;
 }
 
 @media (max-width: 480px) {
@@ -1305,19 +1582,44 @@ footer a {
     padding: 0 1rem;
 }
 
-.download-options {
+.export-group {
+    margin-bottom: 0.5rem;
+}
+
+.export-options {
     display: flex;
     gap: 0.75rem;
     flex-wrap: wrap;
 }
 
-.download-options .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
+.export-options .btn {
+    min-width: 80px;
 }
 
-.btn-icon {
+.export-tip {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+.export-tip strong {
+    color: var(--text);
+}
+
+.pdf-capture {
+    margin-top: 0.5rem;
+}
+
+.pdf-capture .report-description {
+    margin-bottom: 0.75rem;
+    font-size: 0.85rem;
+}
+
+.tip-icon {
     font-size: 1rem;
 }
 

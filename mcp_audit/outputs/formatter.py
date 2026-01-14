@@ -18,6 +18,12 @@ def format_results(results: list[ScanResult], format: str) -> str:
         return _to_markdown(results)
     elif format == "csv":
         return _to_csv(results)
+    elif format == "cyclonedx":
+        from mcp_audit.outputs.cyclonedx import generate_cyclonedx_bom
+        return generate_cyclonedx_bom(results, format="json")
+    elif format == "cyclonedx-xml":
+        from mcp_audit.outputs.cyclonedx import generate_cyclonedx_bom
+        return generate_cyclonedx_bom(results, format="xml")
     else:
         # Table format is handled separately with rich
         return _to_json(results)
@@ -50,6 +56,9 @@ def _to_json(results: list[ScanResult]) -> str:
     # Collect APIs
     apis_data = _build_apis_summary(results)
 
+    # Collect AI models
+    models_data = _build_models_summary(results)
+
     data = {
         "scan_time": datetime.now().isoformat(),
         "total_mcps": len(results),
@@ -64,6 +73,10 @@ def _to_json(results: list[ScanResult]) -> str:
     # Add APIs section if any detected
     if apis_data["total"] > 0:
         data["apis_detected"] = apis_data
+
+    # Add AI models section if any detected
+    if models_data["total"] > 0:
+        data["ai_models"] = models_data
 
     return json.dumps(data, indent=2)
 
@@ -109,6 +122,36 @@ def _build_apis_summary(results: list[ScanResult]) -> dict:
         "total": len(all_apis),
         "by_category": categories,
         "items": all_apis,
+    }
+
+
+def _build_models_summary(results: list[ScanResult]) -> dict:
+    """Build AI models summary from results"""
+    all_models = []
+    for r in results:
+        if r.model:
+            model_dict = r.model.copy() if isinstance(r.model, dict) else {}
+            model_dict["source_mcp"] = r.name
+            all_models.append(model_dict)
+
+    # Count by provider
+    by_provider = {}
+    for m in all_models:
+        provider = m.get("provider", "Unknown")
+        by_provider[provider] = by_provider.get(provider, 0) + 1
+
+    # Count by hosting
+    by_hosting = {"cloud": 0, "local": 0, "unknown": 0}
+    for m in all_models:
+        hosting = m.get("hosting", "unknown")
+        if hosting in by_hosting:
+            by_hosting[hosting] += 1
+
+    return {
+        "total": len(all_models),
+        "by_provider": by_provider,
+        "by_hosting": by_hosting,
+        "items": all_models,
     }
 
 

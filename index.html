@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>APIsec MCP Discovery and Audit</title>
-    <link rel="stylesheet" href="styles.css?v=22">
+    <link rel="stylesheet" href="styles.css?v=30">
 </head>
 <body>
     <div class="container">
@@ -144,23 +144,34 @@
                         </div>
 
                         <!-- Results Table -->
-                        <div class="table-container">
-                            <table id="results-table">
-                                <thead>
-                                    <tr>
-                                        <th>MCP Name</th>
-                                        <th>Description</th>
-                                        <th>Source</th>
-                                        <th>Repository</th>
-                                        <th>Known</th>
-                                        <th>Risk</th>
-                                        <th>Risk Flags</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="results-body">
-                                    <!-- Populated by JavaScript -->
-                                </tbody>
-                            </table>
+                        <div id="table-banner" class="table-banner">
+                            <div class="table-banner-header" onclick="toggleTableSection()">
+                                <div class="table-banner-title">
+                                    <span class="inventory-icon">📋</span>
+                                    <strong id="table-banner-title">MCP DISCOVERY RESULTS</strong>
+                                </div>
+                                <span class="toggle-icon" id="table-toggle-icon">▶</span>
+                            </div>
+                            <div class="table-detail" id="table-detail">
+                                <div class="table-container">
+                                    <table id="results-table">
+                                        <thead>
+                                            <tr>
+                                                <th>MCP Name</th>
+                                                <th>Description</th>
+                                                <th>Source</th>
+                                                <th>Repository</th>
+                                                <th>Known</th>
+                                                <th>Risk</th>
+                                                <th>Risk Flags</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="results-body">
+                                            <!-- Populated by JavaScript -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Findings & Remediation Section -->
@@ -168,44 +179,59 @@
                             <!-- Populated by JavaScript -->
                         </div>
 
-                        <!-- Actions -->
-                        <div class="actions">
-                            <button id="export-json-btn" class="btn secondary">Export JSON</button>
-                            <button id="export-csv-btn" class="btn secondary">Export CSV</button>
-                            <button id="export-md-btn" class="btn secondary">Export Markdown</button>
-                            <button id="scan-again-btn" class="btn outline">Scan Again</button>
+                        <!-- Export & Share Section -->
+                        <div id="report-section" class="export-banner">
+                            <div class="export-banner-header" onclick="toggleExportSection()">
+                                <div class="export-banner-title">
+                                    <span class="inventory-icon">📤</span>
+                                    <strong>EXPORT & SHARE</strong>
+                                </div>
+                                <span class="toggle-icon" id="export-toggle-icon">▶</span>
+                            </div>
+                            <div class="export-detail" id="export-detail">
+                                <div class="export-detail-content">
+                                    <!-- Export Options -->
+                                    <div class="export-group">
+                                        <div class="export-options">
+                                            <button id="export-json-btn" class="btn secondary">JSON</button>
+                                            <button id="export-csv-btn" class="btn secondary">CSV</button>
+                                            <button id="export-cyclonedx-btn" class="btn secondary" title="CycloneDX 1.6 AI-BOM">AI-BOM</button>
+                                        </div>
+                                        <p class="export-tip">
+                                            <span class="tip-icon">💡</span>
+                                            <strong>CI/CD Integration:</strong> Use JSON export to fail builds on critical risks
+                                        </p>
+                                        <p class="export-tip">
+                                            <span class="tip-icon">🤖</span>
+                                            <strong>AI-BOM:</strong> CycloneDX 1.6 format for AI supply chain security tracking
+                                        </p>
+                                    </div>
+
+                                    <div class="report-divider">
+                                        <span>or get a PDF report</span>
+                                    </div>
+
+                                    <!-- PDF Report via Email -->
+                                    <div class="pdf-capture">
+                                        <p class="report-description">Receive a professional PDF report to share with your security team.</p>
+                                        <div class="email-capture">
+                                            <input type="email" id="report-email" placeholder="Enter your email" class="email-input">
+                                            <button id="send-report-btn" class="btn primary">Send PDF</button>
+                                        </div>
+                                        <div class="report-status" id="report-status"></div>
+                                    </div>
+
+                                    <p class="privacy-note">
+                                        <span class="privacy-icon">🔒</span>
+                                        No secrets transmitted. Scanning happens client-side.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Lead Capture / PDF Report Section -->
-                        <div id="report-section" class="report-section">
-                            <div class="report-header">
-                                <span class="report-icon">📄</span>
-                                <h3>Get a PDF Report</h3>
-                            </div>
-                            <p class="report-description">Receive a professional report to share with your security team.</p>
-
-                            <div class="report-options">
-                                <div class="email-capture">
-                                    <input type="email" id="report-email" placeholder="Enter your email" class="email-input">
-                                    <button id="send-report-btn" class="btn primary">Send Report</button>
-                                </div>
-                                <div class="report-status" id="report-status"></div>
-                            </div>
-
-                            <div class="report-divider">
-                                <span>or download directly</span>
-                            </div>
-
-                            <div class="download-options">
-                                <button id="download-pdf-btn" class="btn secondary">
-                                    <span class="btn-icon">📥</span> Download PDF
-                                </button>
-                            </div>
-
-                            <p class="privacy-note">
-                                <span class="privacy-icon">🔒</span>
-                                No secrets are transmitted. Only scan summary data is sent.
-                            </p>
+                        <!-- Scan Again -->
+                        <div class="actions">
+                            <button id="scan-again-btn" class="btn outline">Scan Another Org</button>
                         </div>
                     </div>
 
@@ -374,9 +400,7 @@
         </footer>
     </div>
 
-    <!-- html2pdf.js for client-side PDF generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="app.js?v=21"></script>
+    <script src="app.js?v=30"></script>
 </body>
 </html>
 

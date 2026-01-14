@@ -28,7 +28,7 @@ def scan_local(
         None, "--path", "-p", help="Scan a specific directory for project-level MCP configs"
     ),
     format: str = typer.Option(
-        "table", "--format", "-f", help="Output format: table, json, markdown, csv"
+        "table", "--format", "-f", help="Output format: table, json, markdown, csv, cyclonedx, cyclonedx-xml"
     ),
     output: Optional[Path] = typer.Option(
         None, "--output", "-o", help="Write output to file"
@@ -57,6 +57,12 @@ def scan_local(
     no_apis: bool = typer.Option(
         False, "--no-apis", help="Skip API endpoint detection entirely"
     ),
+    no_report: bool = typer.Option(
+        False, "--no-report", help="Skip email prompt and PDF report offer"
+    ),
+    email: Optional[str] = typer.Option(
+        None, "--email", help="Send PDF report to this email (non-interactive)"
+    ),
 ):
     """
     Scan for MCP configurations on local machine or in a directory.
@@ -70,9 +76,11 @@ def scan_local(
         return
 
     results: list[ScanResult] = []
-    
-    console.print("\n[bold blue]MCP Audit - Local Scan[/bold blue]\n")
-    
+
+    console.print("\n[bold blue]APIsec MCP Audit[/bold blue]")
+    console.print("[dim]Privacy: All scanning happens locally. No data is sent unless you")
+    console.print("choose to receive a PDF report. Use --no-report to skip prompts.[/dim]\n")
+
     # Scan for desktop app configurations
     with console.status("[bold green]Scanning for MCP configurations..."):
         
@@ -169,6 +177,15 @@ def scan_local(
             api_info["mcp_name"] = r.name
             all_apis.append(api_info)
 
+    # Collect all AI models for display
+    all_models = []
+    for r in results:
+        if r.model:
+            model_info = r.model.copy() if isinstance(r.model, dict) else r.model
+            if isinstance(model_info, dict):
+                model_info["mcp_name"] = r.name
+                all_models.append(model_info)
+
     # Show secrets section FIRST if any detected (highest priority)
     if all_secrets and not secrets_only and not apis_only:
         _print_secrets_alert(all_secrets)
@@ -184,6 +201,10 @@ def scan_local(
     # Show API inventory section (after secrets, before MCP table)
     if all_apis and not apis_only:
         _print_apis_inventory(all_apis)
+
+    # Show AI Models summary (after APIs)
+    if all_models and not secrets_only and not apis_only:
+        _print_models_summary(all_models)
 
     # If apis-only mode, show APIs and return
     if apis_only:
@@ -222,6 +243,18 @@ def scan_local(
     if output:
         output.write_text(formatted)
         console.print(f"\n[green]Results written to {output}[/green]")
+
+        # CI/CD integration tip for JSON exports
+        if format == "json":
+            console.print()
+            console.print("─" * 60)
+            console.print("[bold blue]CI/CD Integration Tip:[/bold blue]")
+            console.print("  Parse results to fail builds when critical risks are found.")
+            console.print("  [dim]Example: jq '.mcps[] | select(.registry_risk == \"critical\")' " + str(output) + "[/dim]")
+            console.print()
+            console.print("  [dim]Docs: https://apisec-inc.github.io/mcp-audit/ci-cd[/dim]")
+            console.print("─" * 60)
+        return  # Skip email prompt when outputting to file
     else:
         if format == "table":
             _print_table(results, trust_results if with_trust else None, with_registry)
@@ -239,6 +272,14 @@ def scan_local(
         with_risks = [r for r in results if r.risk_flags]
         if with_risks:
             console.print("\n[dim]Run `mcp-audit scan --remediation` for detailed findings and fix guidance.[/dim]")
+
+    # Email report handling
+    if email:
+        # Non-interactive mode: send report to specified email
+        _send_report_to_email(email, results, all_secrets, all_apis)
+    elif not no_report and not output:
+        # Interactive mode: prompt for email
+        _prompt_for_email_report(results, all_secrets, all_apis)
 
 
 def _print_table(results: list[ScanResult], trust_results: dict = None, with_registry: bool = False):
@@ -261,6 +302,11 @@ def _print_table(results: list[ScanResult], trust_results: dict = None, with_reg
     has_secrets = any(r.secrets for r in results)
     if has_secrets:
         table.add_column("Secrets", style="red")
+
+    # Check if any results have AI models
+    has_models = any(r.model for r in results)
+    if has_models:
+        table.add_column("AI Model", style="magenta")
 
     if trust_results:
         table.add_column("Trust", style="bold")
@@ -302,6 +348,21 @@ def _print_table(results: list[ScanResult], trust_results: dict = None, with_reg
                     row.append(f"[yellow]{high} high[/yellow]")
                 else:
                     row.append(f"{len(r.secrets)} found")
+            else:
+                row.append("-")
+
+        # Add AI model column if any results have models
+        if has_models:
+            if r.model:
+                model_name = r.model.get("model_name", "Unknown")
+                provider = r.model.get("provider", "")
+                hosting = r.model.get("hosting", "unknown")
+                if hosting == "cloud":
+                    row.append(f"[blue]{model_name}[/blue]")
+                elif hosting == "local":
+                    row.append(f"[green]{model_name}[/green]")
+                else:
+                    row.append(model_name)
             else:
                 row.append("-")
 
@@ -612,7 +673,7 @@ def _print_apis_inventory(apis: list, detailed: bool = False):
 
     console.print()
     console.print("═" * 60)
-    console.print(f"[bold blue]📡 API INVENTORY[/bold blue] - {len(apis)} endpoint(s) discovered")
+    console.print(f"[bold blue]📡 ENDPOINTS DISCOVERED[/bold blue] - {len(apis)} connection(s)")
     console.print("═" * 60)
 
     # Print by category
@@ -647,3 +708,210 @@ def _print_apis_inventory(apis: list, detailed: bool = False):
 
     console.print()
     console.print("─" * 60)
+
+
+def _print_models_summary(models: list):
+    """Print AI Models summary section"""
+    if not models:
+        return
+
+    # Group by provider
+    by_provider = {}
+    for m in models:
+        provider = m.get("provider", "Unknown")
+        if provider not in by_provider:
+            by_provider[provider] = []
+        by_provider[provider].append(m)
+
+    # Group by hosting
+    by_hosting = {"cloud": 0, "local": 0, "unknown": 0}
+    for m in models:
+        hosting = m.get("hosting", "unknown")
+        if hosting in by_hosting:
+            by_hosting[hosting] += 1
+
+    console.print()
+    console.print("═" * 60)
+    console.print(f"[bold magenta]🤖 AI MODELS[/bold magenta] - {len(models)} model(s) detected")
+    console.print("═" * 60)
+
+    # By Provider
+    console.print()
+    console.print("[bold]By Provider:[/bold]")
+    for provider, provider_models in sorted(by_provider.items(), key=lambda x: -len(x[1])):
+        count = len(provider_models)
+        bar = "█" * min(count * 4, 20)
+        model_names = ", ".join(m.get("model_name", "Unknown") for m in provider_models[:3])
+        if len(provider_models) > 3:
+            model_names += f" +{len(provider_models) - 3} more"
+        console.print(f"  {provider:15} [magenta]{bar}[/magenta] {count} ({model_names})")
+
+    # By Hosting
+    console.print()
+    console.print("[bold]By Hosting:[/bold]")
+    cloud_count = by_hosting.get("cloud", 0)
+    local_count = by_hosting.get("local", 0)
+    if cloud_count:
+        bar = "█" * min(cloud_count * 4, 20)
+        console.print(f"  Cloud           [blue]{bar}[/blue] {cloud_count}")
+    if local_count:
+        bar = "█" * min(local_count * 4, 20)
+        console.print(f"  Local           [green]{bar}[/green] {local_count}")
+
+    # Model Inventory
+    console.print()
+    console.print("[bold]Model Inventory:[/bold]")
+    for m in models:
+        model_name = m.get("model_name", "Unknown")
+        provider = m.get("provider", "Unknown")
+        hosting = m.get("hosting", "unknown")
+        mcp_name = m.get("mcp_name", "unknown")
+
+        hosting_label = f"[blue]Cloud[/blue]" if hosting == "cloud" else "[green]Local[/green]" if hosting == "local" else "[dim]Unknown[/dim]"
+        console.print(f"  • {model_name} — {provider} ({hosting_label}) — [dim]{mcp_name}[/dim]")
+
+    console.print()
+    console.print("─" * 60)
+
+
+def _validate_email(email: str) -> bool:
+    """Basic email format validation"""
+    import re
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return bool(re.match(pattern, email))
+
+
+def _build_scan_summary(results: list, all_secrets: list, all_apis: list) -> dict:
+    """Build scan summary for report/backend (no actual secret values)"""
+    # Risk distribution
+    risk_dist = {"critical": 0, "high": 0, "medium": 0, "low": 0, "unknown": 0}
+    for r in results:
+        risk = (r.registry_risk or "unknown").lower()
+        if risk in risk_dist:
+            risk_dist[risk] += 1
+
+    # Secrets severity counts
+    secrets_severity = {"critical": 0, "high": 0, "medium": 0}
+    for s in all_secrets:
+        sev = s.get("severity", "medium").lower()
+        if sev in secrets_severity:
+            secrets_severity[sev] += 1
+
+    # API categories
+    api_categories = {}
+    for a in all_apis:
+        cat = a.get("category", "unknown")
+        api_categories[cat] = api_categories.get(cat, 0) + 1
+
+    # Unverified MCPs
+    unverified = [r for r in results if not r.is_known]
+
+    # MCP summaries (no secret values)
+    mcp_summaries = []
+    for r in results:
+        mcp_summaries.append({
+            "name": r.name,
+            "source": r.source,
+            "risk": r.registry_risk or "unknown",
+            "risk_flags": r.risk_flags,
+            "secrets_count": len(r.secrets),
+            "apis": [a.get("url", "") for a in r.apis] if hasattr(r, 'apis') else [],
+            "is_known": r.is_known,
+            "provider": r.provider,
+        })
+
+    return {
+        "total_mcps": len(results),
+        "risk_distribution": risk_dist,
+        "secrets_count": len(all_secrets),
+        "secrets_severity": secrets_severity,
+        "apis_discovered": {
+            "total": len(all_apis),
+            **api_categories
+        },
+        "unverified_mcps": len(unverified),
+        "mcps": mcp_summaries,
+    }
+
+
+def _prompt_for_email_report(results: list, all_secrets: list, all_apis: list):
+    """Prompt user for email to receive PDF report"""
+    console.print()
+    console.print("─" * 60)
+    console.print("[bold blue]📄 Get a PDF report to share with your team[/bold blue]")
+
+    while True:
+        email_input = console.input("   Email (press Enter to skip): ").strip()
+
+        if not email_input:
+            # User skipped
+            console.print("[dim]   Skipped. Run with --email <email> to get a report later.[/dim]")
+            return
+
+        if not _validate_email(email_input):
+            console.print("[red]   Invalid email format. Press Enter to skip or try again.[/red]")
+            continue
+
+        # Valid email - send report
+        _send_report_to_email(email_input, results, all_secrets, all_apis)
+        break
+
+    console.print("─" * 60)
+
+
+def _send_report_to_email(email: str, results: list, all_secrets: list, all_apis: list):
+    """Send scan summary to backend for PDF generation and email delivery"""
+    import requests
+    from datetime import datetime
+
+    # Build summary (no actual secret values)
+    summary = _build_scan_summary(results, all_secrets, all_apis)
+
+    # Determine scan type and target
+    found_in_set = set(r.found_in for r in results)
+    scan_type = "local"
+    target = "local-machine"
+
+    payload = {
+        "email": email,
+        "source": "cli",
+        "scan_type": scan_type,
+        "target": target,
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "summary": summary,
+    }
+
+    # Backend endpoint (configurable)
+    backend_url = "https://apisec.ai/api/mcp-leads"
+
+    try:
+        console.print(f"\n[dim]   Sending report to {email}...[/dim]")
+
+        response = requests.post(
+            backend_url,
+            json=payload,
+            timeout=10,
+            headers={"Content-Type": "application/json"}
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            report_url = data.get("report_url", "")
+            console.print(f"\n[green]✅ Report sent to {email}[/green]")
+            if report_url:
+                console.print(f"   View online: {report_url}")
+        else:
+            console.print(f"\n[yellow]⚠️  Couldn't send report (server returned {response.status_code})[/yellow]")
+            console.print("[dim]   Results displayed above. Try again later with: mcp-audit scan --email <email>[/dim]")
+
+    except requests.exceptions.Timeout:
+        console.print("\n[yellow]⚠️  Request timed out. Results displayed above.[/yellow]")
+        console.print("[dim]   Try again later with: mcp-audit scan --email <email>[/dim]")
+    except requests.exceptions.ConnectionError:
+        console.print("\n[yellow]⚠️  Couldn't connect to server. Results displayed above.[/yellow]")
+        console.print("[dim]   Try again later with: mcp-audit scan --email <email>[/dim]")
+    except Exception as e:
+        console.print(f"\n[yellow]⚠️  Error sending report: {str(e)}[/yellow]")
+        console.print("[dim]   Results displayed above. Try again later.[/dim]")
+
+
