@@ -57,6 +57,12 @@ def scan_local(
     no_apis: bool = typer.Option(
         False, "--no-apis", help="Skip API endpoint detection entirely"
     ),
+    models_only: bool = typer.Option(
+        False, "--models-only", help="Only show detected AI models, skip MCP inventory"
+    ),
+    no_models: bool = typer.Option(
+        False, "--no-models", help="Skip AI model detection entirely"
+    ),
     no_report: bool = typer.Option(
         False, "--no-report", help="Skip email prompt and PDF report offer"
     ),
@@ -78,8 +84,8 @@ def scan_local(
     results: list[ScanResult] = []
 
     console.print("\n[bold blue]APIsec MCP Audit[/bold blue]")
-    console.print("[dim]Privacy: All scanning happens locally. No data is sent unless you")
-    console.print("choose to receive a PDF report. Use --no-report to skip prompts.[/dim]\n")
+    console.print("[dim]Privacy: All scanning happens locally. No data is sent unless you[/dim]")
+    console.print("[dim]choose to receive a PDF report. Use --no-report to skip prompts.[/dim]\n")
 
     # Scan for desktop app configurations
     with console.status("[bold green]Scanning for MCP configurations..."):
@@ -161,6 +167,11 @@ def scan_local(
         for r in results:
             r.apis = []
 
+    # Clear models if --no-models flag
+    if no_models:
+        for r in results:
+            r.model = None
+
     # Collect all secrets for display
     all_secrets = []
     for r in results:
@@ -187,7 +198,7 @@ def scan_local(
                 all_models.append(model_info)
 
     # Show secrets section FIRST if any detected (highest priority)
-    if all_secrets and not secrets_only and not apis_only:
+    if all_secrets and not secrets_only and not apis_only and not models_only:
         _print_secrets_alert(all_secrets)
 
     # If secrets-only mode, show secrets and return
@@ -199,11 +210,11 @@ def scan_local(
         return
 
     # Show API inventory section (after secrets, before MCP table)
-    if all_apis and not apis_only:
+    if all_apis and not apis_only and not models_only:
         _print_apis_inventory(all_apis)
 
     # Show AI Models summary (after APIs)
-    if all_models and not secrets_only and not apis_only:
+    if all_models and not secrets_only and not apis_only and not models_only:
         _print_models_summary(all_models)
 
     # If apis-only mode, show APIs and return
@@ -212,6 +223,14 @@ def scan_local(
             _print_apis_inventory(all_apis, detailed=True)
         else:
             console.print("\n[green]No API endpoints detected in MCP configurations.[/green]")
+        return
+
+    # If models-only mode, show models and return
+    if models_only:
+        if all_models:
+            _print_models_summary(all_models, detailed=True)
+        else:
+            console.print("\n[green]No AI models detected in MCP configurations.[/green]")
         return
 
     # Output results
@@ -710,7 +729,7 @@ def _print_apis_inventory(apis: list, detailed: bool = False):
     console.print("─" * 60)
 
 
-def _print_models_summary(models: list):
+def _print_models_summary(models: list, detailed: bool = False):
     """Print AI Models summary section"""
     if not models:
         return
@@ -882,7 +901,8 @@ def _send_report_to_email(email: str, results: list, all_secrets: list, all_apis
     }
 
     # Backend endpoint (configurable)
-    backend_url = "https://apisec.ai/api/mcp-leads"
+    backend_url = "https://mcp-audit-api.vercel.app/api/report"
+    api_key = "a85eeddadf75ea8ff5dea73b3e823a6ce804fddd0d7f7d8dd8147c5d112b5c52"
 
     try:
         console.print(f"\n[dim]   Sending report to {email}...[/dim]")
@@ -890,8 +910,11 @@ def _send_report_to_email(email: str, results: list, all_secrets: list, all_apis
         response = requests.post(
             backend_url,
             json=payload,
-            timeout=10,
-            headers={"Content-Type": "application/json"}
+            timeout=30,
+            headers={
+                "Content-Type": "application/json",
+                "X-API-Key": api_key
+            }
         )
 
         if response.status_code == 200:

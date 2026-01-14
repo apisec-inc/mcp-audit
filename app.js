@@ -2344,11 +2344,12 @@ if (document.readyState === 'loading') {
 }
 
 // ============================================
-// Lead Capture & PDF Report Functions
+// PDF Report Functions
 // ============================================
 
-// Backend endpoint for lead capture
-const LEAD_CAPTURE_URL = 'https://apisec.ai/api/mcp-leads';
+// Backend endpoint for report generation
+const REPORT_API_URL = 'https://mcp-audit-api.vercel.app/api/report';
+const REPORT_API_KEY = 'a85eeddadf75ea8ff5dea73b3e823a6ce804fddd0d7f7d8dd8147c5d112b5c52';
 
 // Validate email format
 function validateEmail(email) {
@@ -2359,69 +2360,33 @@ function validateEmail(email) {
 // Build scan summary for sending (no actual secret values)
 function buildScanSummary() {
     const totalMcps = scanResults.length;
-    const knownMcps = scanResults.filter(r => r.isKnown).length;
-    const unknownMcps = totalMcps - knownMcps;
     const criticalRisk = scanResults.filter(r => r.registryRisk === 'critical').length;
     const highRisk = scanResults.filter(r => r.registryRisk === 'high').length;
     const mediumRisk = scanResults.filter(r => r.registryRisk === 'medium').length;
     const lowRisk = scanResults.filter(r => r.registryRisk === 'low').length;
 
-    // Count secrets by severity (no values)
+    // Count secrets and APIs
     const allSecrets = scanResults.flatMap(r => r.secrets || []);
-    const secretsBySeverity = {
-        critical: allSecrets.filter(s => s.severity === 'critical').length,
-        high: allSecrets.filter(s => s.severity === 'high').length,
-        medium: allSecrets.filter(s => s.severity === 'medium').length
-    };
-
-    // Count APIs by category
     const allApis = scanResults.flatMap(r => r.apis || []);
-    const apisByCategory = {};
-    for (const api of allApis) {
-        const cat = api.category || 'unknown';
-        apisByCategory[cat] = (apisByCategory[cat] || 0) + 1;
-    }
+    const allModels = scanResults.filter(r => r.model).length;
 
-    // Risk flags summary
-    const riskFlagCounts = {};
-    for (const r of scanResults) {
-        for (const flag of (r.riskFlags || [])) {
-            riskFlagCounts[flag] = (riskFlagCounts[flag] || 0) + 1;
-        }
-    }
-
+    // Return structure matching backend API expectations
     return {
-        scan_time: new Date().toISOString(),
-        source: 'web_app',
-        totals: {
-            mcps: totalMcps,
-            known: knownMcps,
-            unknown: unknownMcps,
-            repositories: new Set(scanResults.map(r => r.repository)).size
-        },
-        risk_levels: {
+        total_mcps: totalMcps,
+        secrets_count: allSecrets.length,
+        apis_count: allApis.length,
+        models_count: allModels,
+        risk_breakdown: {
             critical: criticalRisk,
             high: highRisk,
             medium: mediumRisk,
             low: lowRisk
         },
-        secrets: {
-            total: allSecrets.length,
-            by_severity: secretsBySeverity
-        },
-        apis: {
-            total: allApis.length,
-            by_category: apisByCategory
-        },
-        risk_flags: riskFlagCounts,
         // MCP list (names only, no secrets)
         mcps: scanResults.map(r => ({
             name: r.name,
             source: r.source,
-            repository: r.repository,
-            is_known: r.isKnown,
-            risk_level: r.registryRisk,
-            risk_flags: r.riskFlags
+            risk_level: r.registryRisk
         }))
     };
 }
@@ -2451,21 +2416,25 @@ async function sendReportToEmail(email) {
     try {
         const summary = buildScanSummary();
 
-        const response = await fetch(LEAD_CAPTURE_URL, {
+        const response = await fetch(REPORT_API_URL, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-API-Key': REPORT_API_KEY
             },
             body: JSON.stringify({
                 email: email,
-                scan_summary: summary
+                source: 'web',
+                scan_type: 'local',
+                timestamp: new Date().toISOString(),
+                summary: summary
             })
         });
 
         if (response.ok) {
             statusEl.className = 'report-status success';
             statusEl.textContent = 'Report sent! Check your inbox shortly.';
-            trackEvent({ event: 'lead_capture', source: 'web_app', method: 'email' });
+            trackEvent({ event: 'report_sent', source: 'web_app', method: 'email' });
             return true;
         } else {
             throw new Error('Failed to send report');
@@ -2473,7 +2442,7 @@ async function sendReportToEmail(email) {
     } catch (error) {
         statusEl.className = 'report-status error';
         statusEl.textContent = 'Failed to send report. Please try again.';
-        console.error('Lead capture error:', error);
+        console.error('Report send error:', error);
         return false;
     } finally {
         sendBtn.classList.remove('loading');
