@@ -70,7 +70,7 @@ def _build_bom_structure(
                         "type": "application",
                         "name": "mcp-audit",
                         "publisher": "APIsec",
-                        "version": "0.1.0",
+                        "version": "1.0.0",
                         "description": "MCP configuration security audit tool",
                         "externalReferences": [
                             {
