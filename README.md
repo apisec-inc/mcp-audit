@@ -1,14 +1,17 @@
 # MCP Audit
 
-**Discover and audit MCP (Model Context Protocol) servers across your organization.**
+**APIsec MCP Audit shows you what your AI agents can touch - before they go live.**
 
-MCP servers are plugins that give AI assistants special abilities - like reading files, accessing databases, or connecting to services. MCP Audit helps you find and assess these plugins for security risks.
+As developers connect Claude, Cursor, and other AI assistants to databases, APIs, and internal services, they're granting these agents access to sensitive systems - often without security oversight. MCP Audit is a security scanner for AI-assisted development environments that reveals exactly what each agent can access: which databases it can query, which APIs it can call, which credentials it holds, and which AI models it uses. Scan developer AI agent configurations across your teams and generate AI-BOMs (AI Bill of Materials) for compliance and supply chain transparency. It's visibility and governance for the new attack surface created by AI-assisted development.
 
 ## Key Features
 
 - **MCP Discovery** - Find all MCP servers across Claude Desktop, Cursor, VS Code, and project configs
 - **Secrets Detection** - Detect exposed API keys, tokens, and passwords with provider-specific remediation
 - **API Inventory** - Catalog all database, REST, SSE, and cloud endpoints MCPs connect to
+- **AI Model Detection** - Discover which AI models are configured (OpenAI, Anthropic, Google, Mistral, Ollama)
+- **AI-BOM Export** - Generate CycloneDX 1.6 AI Bill of Materials for compliance
+- **Email Reports** - Get professional PDF security reports delivered to your inbox
 - **Registry Verification** - Check MCPs against a curated registry of 50+ known servers
 - **Risk Assessment** - Identify risky permissions, unverified sources, and security flags
 
@@ -122,6 +125,17 @@ MCP Audit scans for configurations in:
 | ☁️ **SaaS** | Slack, GitHub, OpenAI, Anthropic APIs |
 | 🏢 **Cloud** | AWS S3, Google Cloud, Azure |
 
+### Detected AI Models
+
+| Provider | Models |
+|----------|--------|
+| **OpenAI** | GPT-4, GPT-4 Turbo, GPT-3.5, o1, o3 series |
+| **Anthropic** | Claude 3.5, Claude 3, Claude 2 |
+| **Google** | Gemini Pro, Gemini Ultra, PaLM |
+| **Meta** | Llama 2, Llama 3, Code Llama |
+| **Mistral** | Mistral 7B, Mixtral 8x7B |
+| **Local** | Ollama models |
+
 ---
 
 ## CLI Commands
@@ -147,9 +161,19 @@ mcp-audit scan --secrets-only
 # APIs only - show endpoint inventory
 mcp-audit scan --apis-only
 
-# Skip secrets/APIs detection
+# AI models only - show model inventory
+mcp-audit scan --models-only
+
+# Skip secrets/APIs/models detection
 mcp-audit scan --no-secrets
 mcp-audit scan --no-apis
+mcp-audit scan --no-models
+
+# Email PDF report
+mcp-audit scan --email user@company.com
+
+# Export AI-BOM (CycloneDX 1.6)
+mcp-audit scan --format cyclonedx --output ai-bom.json
 ```
 
 ### View MCP Registry
