@@ -16,6 +16,6 @@
     "@types/nodemailer": "^7.0.5",
     "@types/react": "^18.2.48",
     "typescript": "^5.3.3",
-    "vercel": "^33.0.0"
+    "vercel": "^50.4.4"
   }
 }
