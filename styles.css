@@ -1687,3 +1687,75 @@ footer a {
         justify-content: center;
     }
 }
+
+/* Demo Mode Styles */
+.demo-banner {
+    background: #FEF3C7;
+    border: 1px solid #F59E0B;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.demo-banner span:first-child {
+    font-weight: 600;
+    color: #B45309;
+}
+
+.demo-banner span:nth-child(2) {
+    color: #92400E;
+    flex: 1;
+}
+
+.demo-banner button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #B45309;
+    font-size: 16px;
+    padding: 4px 8px;
+}
+
+.demo-banner button:hover {
+    background: rgba(180, 83, 9, 0.1);
+    border-radius: 4px;
+}
+
+.demo-divider {
+    display: flex;
+    align-items: center;
+    margin: 16px 0;
+}
+
+.demo-divider::before,
+.demo-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--border);
+}
+
+.demo-divider span {
+    padding: 0 12px;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.btn.secondary {
+    background: #F3F4F6;
+    color: #374151;
+    border: 1px solid #D1D5DB;
+}
+
+.btn.secondary:hover {
+    background: #E5E7EB;
+}
+
+.demo-hint {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 8px;
+    text-align: center;
+}

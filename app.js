@@ -25,6 +25,7 @@ function trackEvent(eventData) {
 // State
 let githubToken = '';
 let scanResults = [];
+let isDemoMode = false;
 
 // DOM Elements
 const connectSection = document.getElementById('connect-section');
@@ -951,6 +952,500 @@ function lookupMcp(source) {
     return null;
 }
 
+// ============================================
+// Demo Mode Functions
+// ============================================
+
+// Load demo mode data and display results
+async function loadDemoMode() {
+    isDemoMode = true;
+
+    // Track demo mode usage
+    trackEvent({ event: 'demo_mode', source: 'button' });
+
+    // Hide connect section and show progress
+    connectSection?.classList.add('hidden');
+    progressSection?.classList.remove('hidden');
+    updateProgress(10, 'Loading demo results...');
+
+    try {
+        const response = await fetch('demo-data.json');
+        if (!response.ok) {
+            throw new Error('Failed to load demo data');
+        }
+
+        updateProgress(50, 'Processing demo data...');
+        const demoData = await response.json();
+
+        updateProgress(80, 'Preparing display...');
+
+        // Transform demo MCPs to scanResults format
+        scanResults = transformDemoData(demoData);
+
+        // Store demo metadata for display
+        window.demoOrg = demoData.org;
+        window.demoSummary = demoData.summary;
+        window.demoSecrets = demoData.secrets;
+        window.demoApis = demoData.apis;
+        window.demoModels = demoData.models;
+
+        updateProgress(100, 'Complete!');
+
+        // Small delay for UX
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // Display results with demo banner
+        displayDemoResults();
+
+    } catch (error) {
+        console.error('Demo mode error:', error);
+        progressSection?.classList.add('hidden');
+        connectSection?.classList.remove('hidden');
+        alert('Failed to load demo data. Please try again.');
+    }
+}
+
+// Transform demo data MCPs to scanResults format
+function transformDemoData(demoData) {
+    return demoData.mcps.map(mcp => {
+        // Find any secrets for this MCP
+        const mcpSecrets = (demoData.secrets || []).filter(s => s.mcp_name === mcp.name);
+
+        // Find any APIs for this MCP
+        const mcpApis = (demoData.apis || []).filter(a => a.mcp_name === mcp.name);
+
+        // Find any models for this MCP
+        const mcpModel = (demoData.models || []).find(m => m.mcp_name === mcp.name);
+
+        return {
+            name: mcp.name,
+            source: mcp.source,
+            repository: mcp.found_in,
+            filePath: 'mcp.json',
+            type: mcp.source.startsWith('@') ? 'npm' : 'unknown',
+            sourceType: 'config',
+            riskFlags: mcp.risk_flags || [],
+            isKnown: mcp.is_known,
+            provider: mcp.is_known ? 'MCP' : 'Unknown',
+            mcpType: mcp.is_known ? 'official' : 'unknown',
+            registryRisk: mcp.risk,
+            verified: mcp.is_known,
+            description: generateDescriptionFromRiskFlags(mcp.name, mcp.risk_flags),
+            heuristicRisk: null,
+            rawConfig: {
+                env: {},
+                args: []
+            },
+            // Pre-attached secrets/apis/model for demo
+            secrets: mcpSecrets,
+            apis: mcpApis,
+            model: mcpModel || null
+        };
+    });
+}
+
+// Generate description based on risk flags
+function generateDescriptionFromRiskFlags(name, riskFlags) {
+    if (riskFlags.includes('shell-access')) return 'Execute shell commands on the host system';
+    if (riskFlags.includes('database-access')) return 'Database access and query execution';
+    if (riskFlags.includes('filesystem-access')) return 'Read and write files on the local filesystem';
+    if (riskFlags.includes('network-access')) return 'Make outbound network requests';
+    if (riskFlags.includes('remote-mcp')) return 'Remote/hosted MCP server';
+    if (riskFlags.includes('local-binary')) return 'Local binary or script execution';
+    return `${name} MCP integration`;
+}
+
+// Display results for demo mode (with pre-calculated secrets/apis/models)
+function displayDemoResults() {
+    progressSection?.classList.add('hidden');
+
+    if (scanResults.length === 0) {
+        noResultsSection?.classList.remove('hidden');
+        return;
+    }
+
+    resultsSection?.classList.remove('hidden');
+
+    // Show demo banner first
+    showDemoBanner();
+
+    // Collect all pre-calculated secrets, APIs, models from demo data
+    const allSecrets = window.demoSecrets || [];
+    const allApis = window.demoApis || [];
+    const allModels = window.demoModels || [];
+
+    // Summary from demo data - SHOW FIRST
+    const demoSummary = window.demoSummary || {};
+    const totalMcps = demoSummary.total_mcps || scanResults.length;
+    const uniqueRepos = demoSummary.repositories_scanned || new Set(scanResults.map(r => r.repository)).size;
+    const knownMcps = demoSummary.known_mcps || scanResults.filter(r => r.isKnown).length;
+    const unknownMcps = demoSummary.unknown_mcps || (totalMcps - knownMcps);
+    const criticalRisk = demoSummary.critical_risk || scanResults.filter(r => r.registryRisk === 'critical').length;
+    const withSecrets = demoSummary.secrets_detected || allSecrets.length;
+
+    summary.innerHTML = `
+        <div class="summary-item">
+            <div class="value">${totalMcps}</div>
+            <div class="label">MCPs Found</div>
+        </div>
+        <div class="summary-item">
+            <div class="value">${uniqueRepos}</div>
+            <div class="label">Repositories</div>
+        </div>
+        <div class="summary-item ${knownMcps > 0 ? 'success' : ''}">
+            <div class="value">${knownMcps}</div>
+            <div class="label">Known MCPs</div>
+        </div>
+        <div class="summary-item ${unknownMcps > 0 ? 'warning' : ''}">
+            <div class="value">${unknownMcps}</div>
+            <div class="label">Unknown MCPs</div>
+        </div>
+        <div class="summary-item ${criticalRisk > 0 ? 'danger' : ''}">
+            <div class="value">${criticalRisk}</div>
+            <div class="label">Critical Risk</div>
+        </div>
+        <div class="summary-item ${withSecrets > 0 ? 'danger' : ''}">
+            <div class="value">${withSecrets}</div>
+            <div class="label">Secrets Detected</div>
+        </div>
+    `;
+
+    // Update table banner title with count
+    const tableBannerTitle = document.getElementById('table-banner-title');
+    if (tableBannerTitle) {
+        tableBannerTitle.textContent = `MCP DISCOVERY RESULTS - ${totalMcps} server(s) found`;
+    }
+
+    // Display MCP table - SECOND
+    displayDemoMcpTable();
+
+    // Expand the MCP Discovery Results table by default
+    const tableDetail = document.getElementById('table-detail');
+    const tableToggleIcon = document.getElementById('table-toggle-icon');
+    if (tableDetail) {
+        tableDetail.classList.add('expanded');
+    }
+    if (tableToggleIcon) {
+        tableToggleIcon.textContent = '▼';
+    }
+
+    // Now display secrets/APIs/models AFTER the table
+    // Create a container for these sections after the table-banner
+    const tableBanner = document.getElementById('table-banner');
+    const reportSection = document.getElementById('report-section');
+
+    // Display secrets alert - insert after table
+    if (allSecrets.length > 0) {
+        displaySecretsAlertAfterTable(allSecrets, tableBanner);
+    }
+
+    // Display APIs inventory - insert after secrets (or after table)
+    if (allApis.length > 0) {
+        displayApisInventoryAfterTable(allApis, tableBanner);
+    }
+
+    // Display AI Models inventory - insert after APIs (or after table)
+    if (allModels.length > 0) {
+        displayModelsInventoryAfterTable(allModels, tableBanner);
+    }
+
+    // Show export/report section
+    showReportSection();
+}
+
+// Display secrets alert AFTER the table (for demo mode)
+function displaySecretsAlertAfterTable(secrets, afterElement) {
+    if (!secrets || secrets.length === 0) return;
+
+    // Count by severity
+    const critical = secrets.filter(s => s.severity === 'critical').length;
+    const high = secrets.filter(s => s.severity === 'high').length;
+    const medium = secrets.filter(s => s.severity === 'medium').length;
+
+    // Remove existing if any
+    const existing = document.getElementById('secrets-alert');
+    if (existing) existing.remove();
+
+    const alertDiv = document.createElement('div');
+    alertDiv.id = 'secrets-alert';
+    alertDiv.className = 'secrets-alert';
+
+    // Sort by severity
+    const severityOrder = { critical: 0, high: 1, medium: 2 };
+    const sortedSecrets = [...secrets].sort((a, b) =>
+        (severityOrder[a.severity] || 2) - (severityOrder[b.severity] || 2)
+    );
+
+    const secretsHtml = sortedSecrets.map(s => {
+        const severityClass = s.severity === 'critical' ? 'danger' : (s.severity === 'high' ? 'warning' : 'info');
+        const remediation = getSecretRemediation(s);
+
+        return `
+            <div class="secret-item ${severityClass}">
+                <div class="secret-header">
+                    <span class="badge ${severityClass}">${s.severity.toUpperCase()}</span>
+                    <strong>${escapeHtml(s.description)}</strong>
+                </div>
+                <div class="secret-details">
+                    <p><strong>Location:</strong> ${escapeHtml(s.mcp_name)} → <code>${escapeHtml(s.env_key)}</code></p>
+                    <p><strong>Value:</strong> <code>${escapeHtml(s.value_masked)}</code> (${s.value_length} chars)</p>
+                    <p><strong>Remediation:</strong></p>
+                    <ol class="remediation-steps">
+                        ${remediation.map(step => `<li>${step}</li>`).join('')}
+                    </ol>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    const summaryParts = [];
+    if (critical) summaryParts.push(`<span class="text-danger">${critical} critical</span>`);
+    if (high) summaryParts.push(`<span class="text-warning">${high} high</span>`);
+    if (medium) summaryParts.push(`<span class="text-info">${medium} medium</span>`);
+
+    alertDiv.innerHTML = `
+        <div class="secrets-alert-header" onclick="toggleSecretsDetail()">
+            <div class="secrets-alert-title">
+                <span class="alert-icon">⚠️</span>
+                <strong>${secrets.length} SECRET(S) DETECTED - IMMEDIATE ACTION REQUIRED</strong>
+            </div>
+            <span class="toggle-icon">▶</span>
+        </div>
+        <div class="secrets-alert-summary">
+            ${summaryParts.join(' • ')}
+            <span class="text-muted"> - Rotate ALL exposed credentials before continuing</span>
+        </div>
+        <div id="secrets-detail" class="secrets-detail">
+            ${secretsHtml}
+        </div>
+    `;
+
+    // Insert after the table banner
+    if (afterElement && afterElement.parentNode) {
+        afterElement.parentNode.insertBefore(alertDiv, afterElement.nextSibling);
+    }
+}
+
+// Display APIs inventory AFTER the table (for demo mode)
+function displayApisInventoryAfterTable(apis, afterElement) {
+    if (!apis || apis.length === 0) return;
+
+    // Group by category
+    const byCategory = {};
+    for (const api of apis) {
+        const cat = api.category || 'unknown';
+        if (!byCategory[cat]) byCategory[cat] = [];
+        byCategory[cat].push(api);
+    }
+
+    // Remove existing if any
+    const existing = document.getElementById('apis-inventory');
+    if (existing) existing.remove();
+
+    const inventoryDiv = document.createElement('div');
+    inventoryDiv.id = 'apis-inventory';
+    inventoryDiv.className = 'apis-inventory';
+
+    // Category order and info
+    const categoryOrder = ['database', 'rest_api', 'websocket', 'sse', 'saas', 'cloud', 'unknown'];
+
+    let categoriesHtml = '';
+    for (const cat of categoryOrder) {
+        if (!byCategory[cat]) continue;
+        const catApis = byCategory[cat];
+        const info = API_CATEGORY_INFO[cat] || API_CATEGORY_INFO.unknown;
+
+        const apisHtml = catApis.map(api => `
+            <div class="api-item">
+                <span class="api-mcp">${escapeHtml(api.mcpName)}</span>
+                <span class="api-arrow">→</span>
+                <code class="api-url">${escapeHtml(api.maskedUrl)}</code>
+                <span class="api-source">(${escapeHtml(api.source)}: ${escapeHtml(api.sourceKey)})</span>
+            </div>
+        `).join('');
+
+        categoriesHtml += `
+            <div class="api-category">
+                <div class="api-category-header">
+                    <span class="api-icon">${info.icon}</span>
+                    <strong>${info.name.toUpperCase()}</strong>
+                    <span class="api-count">(${catApis.length})</span>
+                </div>
+                <div class="api-items">
+                    ${apisHtml}
+                </div>
+            </div>
+        `;
+    }
+
+    inventoryDiv.innerHTML = `
+        <div class="apis-inventory-header" onclick="toggleApisInventory()">
+            <div class="apis-inventory-title">
+                <span class="inventory-icon">🔗</span>
+                <strong>ENDPOINTS DISCOVERED - ${apis.length} connection(s)</strong>
+            </div>
+            <span class="toggle-icon">▶</span>
+        </div>
+        <div id="apis-detail" class="apis-detail">
+            ${categoriesHtml}
+        </div>
+    `;
+
+    // Insert after secrets alert (or after table if no secrets)
+    const secretsAlert = document.getElementById('secrets-alert');
+    const insertAfter = secretsAlert || afterElement;
+    if (insertAfter && insertAfter.parentNode) {
+        insertAfter.parentNode.insertBefore(inventoryDiv, insertAfter.nextSibling);
+    }
+}
+
+// Display Models inventory AFTER the table (for demo mode)
+function displayModelsInventoryAfterTable(models, afterElement) {
+    if (!models || models.length === 0) return;
+
+    // Group by provider
+    const byProvider = {};
+    for (const model of models) {
+        const provider = model.provider || 'Unknown';
+        if (!byProvider[provider]) byProvider[provider] = [];
+        byProvider[provider].push(model);
+    }
+
+    // Remove existing if any
+    const existing = document.getElementById('models-inventory');
+    if (existing) existing.remove();
+
+    const inventoryDiv = document.createElement('div');
+    inventoryDiv.id = 'models-inventory';
+    inventoryDiv.className = 'models-inventory';
+
+    // Sort providers by count
+    const sortedProviders = Object.entries(byProvider).sort((a, b) => b[1].length - a[1].length);
+
+    let providersHtml = '';
+    for (const [provider, providerModels] of sortedProviders) {
+        const info = MODEL_PROVIDER_INFO[provider] || MODEL_PROVIDER_INFO.Unknown;
+        const barWidth = Math.min(providerModels.length * 4, 20);
+
+        const modelsHtml = providerModels.map(model => `
+            <div class="model-item">
+                <span class="model-name">${escapeHtml(model.modelName)}</span>
+                <span class="model-hosting ${model.hosting}">${model.hosting === 'cloud' ? '☁️ Cloud' : model.hosting === 'local' ? '🏠 Local' : '❓ Unknown'}</span>
+                <span class="model-mcp">(${escapeHtml(model.mcpName)})</span>
+            </div>
+        `).join('');
+
+        providersHtml += `
+            <div class="model-provider">
+                <div class="model-provider-header">
+                    <span class="model-icon">${info.icon}</span>
+                    <strong>${escapeHtml(provider)}</strong>
+                    <span class="model-bar" style="width: ${barWidth * 10}px; background: ${info.color}"></span>
+                    <span class="model-count">${providerModels.length}</span>
+                </div>
+                <div class="model-items">
+                    ${modelsHtml}
+                </div>
+            </div>
+        `;
+    }
+
+    inventoryDiv.innerHTML = `
+        <div class="models-inventory-header" onclick="toggleModelsInventory()">
+            <div class="models-inventory-title">
+                <span class="inventory-icon">🤖</span>
+                <strong>AI MODELS - ${models.length} model(s) detected</strong>
+            </div>
+            <span class="toggle-icon">▶</span>
+        </div>
+        <div id="models-detail" class="models-detail">
+            ${providersHtml}
+        </div>
+    `;
+
+    // Insert after APIs inventory (or after secrets, or after table)
+    const apisInventory = document.getElementById('apis-inventory');
+    const secretsAlert = document.getElementById('secrets-alert');
+    const insertAfter = apisInventory || secretsAlert || afterElement;
+    if (insertAfter && insertAfter.parentNode) {
+        insertAfter.parentNode.insertBefore(inventoryDiv, insertAfter.nextSibling);
+    }
+}
+
+// Display MCP table for demo mode (matches original displayResults format)
+function displayDemoMcpTable() {
+    // Sort results by risk level (critical -> high -> medium -> low -> unknown)
+    const riskOrder = { critical: 0, high: 1, medium: 2, low: 3, unknown: 4 };
+    const sortedResults = [...scanResults].sort((a, b) => {
+        const riskA = riskOrder[a.registryRisk] ?? 4;
+        const riskB = riskOrder[b.registryRisk] ?? 4;
+        return riskA - riskB;
+    });
+
+    // Table with description and risk columns (same structure as original)
+    resultsBody.innerHTML = sortedResults.map(r => {
+        // Build risk indicator
+        const riskBadge = getRegistryRiskBadge(r.registryRisk || 'unknown');
+
+        // Get description
+        const description = r.description || 'Unknown MCP server';
+
+        // Build risk flags HTML
+        const riskFlagsHtml = (r.riskFlags && r.riskFlags.length > 0)
+            ? r.riskFlags.map(f => `<span class="risk-flag ${getRiskLevel(f)} has-tooltip" title="${escapeHtml(getRiskFlagTooltip(f))}">${f}</span>`).join(' ')
+            : '<span class="text-muted">-</span>';
+
+        return `
+            <tr>
+                <td class="name-cell">${escapeHtml(r.name)}</td>
+                <td class="description-cell">${escapeHtml(description)}</td>
+                <td><code>${escapeHtml(r.source)}</code></td>
+                <td>
+                    <span title="${escapeHtml(r.repository)}">
+                        ${escapeHtml(r.repository.split('/')[1] || r.repository)}
+                    </span>
+                </td>
+                <td>${r.isKnown ? '<span class="badge success">Yes</span>' : '<span class="badge danger">No</span>'}</td>
+                <td>${riskBadge}</td>
+                <td>${riskFlagsHtml}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Show demo banner at the top of results
+function showDemoBanner() {
+    // Remove existing banner if any
+    const existingBanner = document.getElementById('demo-banner');
+    if (existingBanner) {
+        existingBanner.remove();
+    }
+
+    const banner = document.createElement('div');
+    banner.id = 'demo-banner';
+    banner.className = 'demo-banner';
+    banner.innerHTML = `
+        <div class="demo-banner-content">
+            <span class="demo-badge">DEMO MODE</span>
+            <span>Viewing sample results for <strong>${window.demoOrg || 'acme-corp'}</strong>.
+            <a href="index.html" class="demo-exit-link">Connect your GitHub</a> to scan your own repos.</span>
+        </div>
+    `;
+
+    // Insert at the top of results section
+    if (resultsSection) {
+        resultsSection.insertBefore(banner, resultsSection.firstChild);
+    }
+}
+
+// Check for demo mode URL parameter
+function checkDemoUrlParam() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('demo') === 'true') {
+        loadDemoMode();
+    }
+}
+
 // Event Listeners - Initialize when DOM is ready
 function initializeEventListeners() {
     // Track page view on load
@@ -1017,6 +1512,14 @@ function initializeEventListeners() {
     document.getElementById('export-md-btn')?.addEventListener('click', () => exportResults('markdown'));
     document.getElementById('scan-again-btn')?.addEventListener('click', resetToOrgSelect);
     document.getElementById('scan-again-btn-2')?.addEventListener('click', resetToOrgSelect);
+
+    // Demo button click handler
+    document.getElementById('demo-btn')?.addEventListener('click', () => {
+        loadDemoMode();
+    });
+
+    // Check for ?demo=true URL parameter on page load
+    checkDemoUrlParam();
 }
 
 // Initialize when DOM is ready
@@ -1496,7 +1999,7 @@ function displayResults() {
 
     resultsSection.classList.remove('hidden');
 
-    // Detect secrets in all scan results
+    // Detect secrets in all scan results (detection first, display later)
     const allSecrets = [];
     for (const r of scanResults) {
         const env = r.rawConfig?.env || {};
@@ -1510,12 +2013,7 @@ function displayResults() {
         }
     }
 
-    // Display secrets alert banner if any secrets found
-    if (allSecrets.length > 0) {
-        displaySecretsAlert(allSecrets);
-    }
-
-    // Detect API endpoints in all scan results
+    // Detect API endpoints in all scan results (detection first, display later)
     const allApis = [];
     for (const r of scanResults) {
         const args = r.rawConfig?.args || [];
@@ -1524,12 +2022,7 @@ function displayResults() {
         allApis.push(...apis);
     }
 
-    // Display APIs inventory if any found
-    if (allApis.length > 0) {
-        displayApisInventory(allApis);
-    }
-
-    // Detect AI models in all scan results
+    // Detect AI models in all scan results (detection first, display later)
     const allModels = [];
     for (const r of scanResults) {
         const model = detectModel(r.rawConfig, r.name);
@@ -1539,12 +2032,9 @@ function displayResults() {
         }
     }
 
-    // Display AI Models inventory if any found
-    if (allModels.length > 0) {
-        displayModelsInventory(allModels);
-    }
+    // === DISPLAY ORDER: Summary Cards -> MCP Table -> Secrets -> APIs -> Models -> Export ===
 
-    // Summary
+    // 1. Summary Cards (FIRST)
     const totalMcps = scanResults.length;
     const uniqueRepos = new Set(scanResults.map(r => r.repository)).size;
     const withRisks = scanResults.filter(r => r.riskFlags.length > 0).length;
@@ -1592,7 +2082,7 @@ function displayResults() {
         ` : ''}
     `;
 
-    // Update table banner title with count
+    // 2. MCP Discovery Results Table (SECOND - expanded by default)
     const tableBannerTitle = document.getElementById('table-banner-title');
     if (tableBannerTitle) {
         tableBannerTitle.textContent = `MCP DISCOVERY RESULTS - ${totalMcps} server(s) found`;
@@ -1633,6 +2123,34 @@ function displayResults() {
             </tr>
         `;
     }).join('');
+
+    // Expand the MCP Discovery Results table by default
+    const tableDetail = document.getElementById('table-detail');
+    const tableToggleIcon = document.getElementById('table-toggle-icon');
+    if (tableDetail) {
+        tableDetail.classList.add('expanded');
+    }
+    if (tableToggleIcon) {
+        tableToggleIcon.textContent = '▼';
+    }
+
+    // 3. Now display Secrets, APIs, Models AFTER the table
+    const tableBanner = document.getElementById('table-banner');
+
+    // Display secrets alert - insert after table
+    if (allSecrets.length > 0) {
+        displaySecretsAlertAfterTable(allSecrets, tableBanner);
+    }
+
+    // Display APIs inventory - insert after secrets (or after table)
+    if (allApis.length > 0) {
+        displayApisInventoryAfterTable(allApis, tableBanner);
+    }
+
+    // Display AI Models inventory - insert after APIs (or after table)
+    if (allModels.length > 0) {
+        displayModelsInventoryAfterTable(allModels, tableBanner);
+    }
 
     // Display remediation section
     displayRemediationSection(scanResults);

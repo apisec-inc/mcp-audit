@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>APIsec MCP Discovery and Audit</title>
-    <link rel="stylesheet" href="styles.css?v=100">
+    <link rel="stylesheet" href="styles.css?v=101">
 </head>
 <body>
     <div class="container">
@@ -103,6 +103,13 @@
                         </div>
 
                         <button id="connect-btn" class="btn primary">Connect to GitHub</button>
+
+                        <div class="demo-divider">
+                            <span>or</span>
+                        </div>
+
+                        <button id="demo-btn" class="btn secondary">▶ Try Demo Mode</button>
+                        <p class="demo-hint">No token needed — see sample scan results</p>
 
                         <div id="connect-status" class="status hidden"></div>
                     </div>
@@ -353,6 +360,14 @@
                                 </div>
                             </div>
                             <div class="command">
+                                <code>mcp-audit scan --models-only</code>
+                                <div class="command-details">
+                                    <p>Shows only detected AI models configured in your MCPs.</p>
+                                    <p>Identifies models from OpenAI, Anthropic, Google, Meta, Mistral, and local Ollama.</p>
+                                    <p>Shows hosting type (Cloud vs Local) for each model.</p>
+                                </div>
+                            </div>
+                            <div class="command">
                                 <code>mcp-audit scan --verbose</code>
                                 <div class="command-details">
                                     <p>Runs the same scan but with detailed output for each step.</p>
@@ -384,6 +399,22 @@
                                     <p>Also supports CSV and Markdown formats for reports and documentation.</p>
                                 </div>
                             </div>
+                            <div class="command">
+                                <code>mcp-audit scan --format cyclonedx -o ai-bom.json</code>
+                                <div class="command-details">
+                                    <p>Exports AI Bill of Materials (AI-BOM) in CycloneDX 1.6 format.</p>
+                                    <p>Industry-standard format for AI supply chain security and compliance.</p>
+                                    <p>Use <code>--format cyclonedx-xml</code> for XML output.</p>
+                                </div>
+                            </div>
+                            <div class="command">
+                                <code>mcp-audit scan --email user@example.com</code>
+                                <div class="command-details">
+                                    <p>Sends a professional PDF security report to the specified email.</p>
+                                    <p>Includes executive summary, findings, and remediation guidance.</p>
+                                    <p>Great for sharing results with security teams or compliance audits.</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -400,7 +431,7 @@
         </footer>
     </div>
 
-    <script src="app.js?v=100"></script>
+    <script src="app.js?v=101"></script>
 </body>
 </html>
 

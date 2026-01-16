@@ -1,0 +1,217 @@
+{
+  "demo": true,
+  "org": "acme-corp (demo)",
+  "scanned_at": "2026-01-15T10:00:00Z",
+  "summary": {
+    "total_mcps": 12,
+    "repositories_scanned": 3,
+    "known_mcps": 8,
+    "unknown_mcps": 4,
+    "critical_risk": 2,
+    "high_risk": 3,
+    "medium_risk": 5,
+    "low_risk": 2,
+    "secrets_detected": 4,
+    "apis_discovered": 6,
+    "ai_models_detected": 3
+  },
+  "secrets": [
+    {
+      "description": "GitHub Personal Access Token",
+      "severity": "critical",
+      "env_key": "GITHUB_TOKEN",
+      "value_masked": "ghp_****...7890",
+      "value_length": 40,
+      "mcp_name": "github-tools"
+    },
+    {
+      "description": "Slack Bot Token",
+      "severity": "high",
+      "env_key": "SLACK_BOT_TOKEN",
+      "value_masked": "xoxb-****...UvWx",
+      "value_length": 52,
+      "mcp_name": "slack-mcp"
+    },
+    {
+      "description": "OpenAI API Key",
+      "severity": "high",
+      "env_key": "OPENAI_API_KEY",
+      "value_masked": "sk-****...xyz",
+      "value_length": 51,
+      "mcp_name": "openai-mcp"
+    },
+    {
+      "description": "Database Connection String",
+      "severity": "critical",
+      "env_key": "DATABASE_URL",
+      "value_masked": "postgresql://****:****@db.acme.com",
+      "value_length": 48,
+      "mcp_name": "postgres-mcp"
+    }
+  ],
+  "apis": [
+    {
+      "category": "database",
+      "maskedUrl": "postgresql://****:****@db.acme.com:5432/production",
+      "mcpName": "postgres-mcp",
+      "source": "env_var",
+      "sourceKey": "DATABASE_URL"
+    },
+    {
+      "category": "database",
+      "maskedUrl": "redis://****@cache.acme.com:6379",
+      "mcpName": "redis-mcp",
+      "source": "env_var",
+      "sourceKey": "REDIS_URL"
+    },
+    {
+      "category": "saas",
+      "maskedUrl": "https://api.slack.com",
+      "mcpName": "slack-mcp",
+      "source": "known_registry",
+      "sourceKey": "Slack API"
+    },
+    {
+      "category": "saas",
+      "maskedUrl": "https://api.github.com",
+      "mcpName": "github-tools",
+      "source": "known_registry",
+      "sourceKey": "GitHub API"
+    },
+    {
+      "category": "saas",
+      "maskedUrl": "https://api.openai.com",
+      "mcpName": "openai-mcp",
+      "source": "known_registry",
+      "sourceKey": "OpenAI API"
+    },
+    {
+      "category": "sse",
+      "maskedUrl": "https://mcp.linear.app/sse",
+      "mcpName": "linear-mcp",
+      "source": "config_field",
+      "sourceKey": "url"
+    }
+  ],
+  "models": [
+    {
+      "modelId": "gpt-4o",
+      "modelName": "GPT-4o",
+      "provider": "OpenAI",
+      "hosting": "cloud",
+      "mcpName": "openai-mcp"
+    },
+    {
+      "modelId": "claude-3-5-sonnet",
+      "modelName": "Claude 3.5 Sonnet",
+      "provider": "Anthropic",
+      "hosting": "cloud",
+      "mcpName": "anthropic-mcp"
+    },
+    {
+      "modelId": "llama-3-70b",
+      "modelName": "Llama 3 70B",
+      "provider": "Meta",
+      "hosting": "local",
+      "mcpName": "local-llm"
+    }
+  ],
+  "mcps": [
+    {
+      "name": "filesystem",
+      "source": "@modelcontextprotocol/server-filesystem",
+      "found_in": "acme-corp/ai-tools",
+      "is_known": true,
+      "risk": "high",
+      "risk_flags": ["filesystem-access"]
+    },
+    {
+      "name": "postgres-mcp",
+      "source": "@modelcontextprotocol/server-postgres",
+      "found_in": "acme-corp/backend-services",
+      "is_known": true,
+      "risk": "critical",
+      "risk_flags": ["database-access", "secrets-detected"]
+    },
+    {
+      "name": "slack-mcp",
+      "source": "@modelcontextprotocol/server-slack",
+      "found_in": "acme-corp/ai-tools",
+      "is_known": true,
+      "risk": "medium",
+      "risk_flags": ["secrets-detected"]
+    },
+    {
+      "name": "github-tools",
+      "source": "@modelcontextprotocol/server-github",
+      "found_in": "acme-corp/ai-tools",
+      "is_known": true,
+      "risk": "medium",
+      "risk_flags": ["secrets-detected"]
+    },
+    {
+      "name": "openai-mcp",
+      "source": "openai-mcp",
+      "found_in": "acme-corp/ai-tools",
+      "is_known": false,
+      "risk": "medium",
+      "risk_flags": ["unverified-source", "secrets-detected"]
+    },
+    {
+      "name": "anthropic-mcp",
+      "source": "anthropic-mcp",
+      "found_in": "acme-corp/backend-services",
+      "is_known": false,
+      "risk": "medium",
+      "risk_flags": ["unverified-source"]
+    },
+    {
+      "name": "shell-executor",
+      "source": "mcp-shell",
+      "found_in": "acme-corp/devops",
+      "is_known": false,
+      "risk": "critical",
+      "risk_flags": ["shell-access", "unverified-source"]
+    },
+    {
+      "name": "redis-mcp",
+      "source": "@modelcontextprotocol/server-redis",
+      "found_in": "acme-corp/backend-services",
+      "is_known": true,
+      "risk": "high",
+      "risk_flags": ["database-access"]
+    },
+    {
+      "name": "linear-mcp",
+      "source": "https://mcp.linear.app/sse",
+      "found_in": "acme-corp/ai-tools",
+      "is_known": true,
+      "risk": "medium",
+      "risk_flags": ["remote-mcp"]
+    },
+    {
+      "name": "local-llm",
+      "source": "./scripts/local-llm-mcp.py",
+      "found_in": "acme-corp/ml-experiments",
+      "is_known": false,
+      "risk": "medium",
+      "risk_flags": ["unverified-source", "local-binary"]
+    },
+    {
+      "name": "memory-store",
+      "source": "@modelcontextprotocol/server-memory",
+      "found_in": "acme-corp/ai-tools",
+      "is_known": true,
+      "risk": "low",
+      "risk_flags": []
+    },
+    {
+      "name": "fetch",
+      "source": "@modelcontextprotocol/server-fetch",
+      "found_in": "acme-corp/ai-tools",
+      "is_known": true,
+      "risk": "low",
+      "risk_flags": ["network-access"]
+    }
+  ]
+}

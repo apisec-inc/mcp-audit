@@ -298,67 +298,34 @@
             <div class="demo-card">
                 <h2>Try the Demo</h2>
                 <p class="demo-intro">
-                    See MCP Audit in action with our pre-configured demo environment. No signup required.
+                    See MCP Audit in action with sample scan results. No GitHub token required.
                 </p>
 
-                <div class="demo-steps">
-                    <div class="demo-step">
-                        <div class="step-number">1</div>
-                        <div class="step-content">
-                            <h3>Open MCP Audit</h3>
-                            <p>Click the button below to open the audit tool.</p>
-                        </div>
-                    </div>
-
-                    <div class="demo-step">
-                        <div class="step-number">2</div>
-                        <div class="step-content">
-                            <h3>Paste the Demo Token</h3>
-                            <p>When prompted for a GitHub token, copy and paste this read-only demo token:</p>
-                            <div class="token-box">
-                                <code id="demo-token">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</code>
-                                <button class="copy-btn" onclick="copyToken()">Copy</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="demo-step">
-                        <div class="step-number">3</div>
-                        <div class="step-content">
-                            <h3>Select the Demo Organization</h3>
-                            <p>From the organization dropdown, select <span class="org-highlight">dan-apisecu</span></p>
-                        </div>
-                    </div>
-
-                    <div class="demo-step">
-                        <div class="step-number">4</div>
-                        <div class="step-content">
-                            <h3>Run the Audit</h3>
-                            <p>Click <strong>Scan Repositories</strong> and wait a few seconds for results.</p>
-                        </div>
-                    </div>
-                </div>
+                <a href="index.html?demo=true" class="start-audit-btn" style="margin-top: 1rem; margin-bottom: 1.5rem;">
+                    ▶ Try Demo Mode
+                </a>
+                <p style="color: var(--text-muted); font-size: 0.85rem; text-align: center;">
+                    View sample results from a fictional "acme-corp" organization
+                </p>
 
                 <div class="what-youll-see">
                     <h4>What You'll See</h4>
                     <ul>
-                        <li><strong>MCP Inventory:</strong> All MCPs discovered across repositories</li>
-                        <li><strong>Secrets Detection:</strong> Exposed API keys, tokens, passwords with rotation links</li>
-                        <li><strong>API Inventory:</strong> Database, REST, SSE, and cloud endpoints MCPs connect to</li>
-                        <li><strong>Risk Assessment:</strong> Registry verification and risk level for each MCP</li>
-                        <li><strong>Remediation:</strong> Step-by-step guidance to fix each finding</li>
-                        <li><strong>Export:</strong> JSON, CSV, Markdown reports</li>
+                        <li><strong>MCP Inventory:</strong> 12 MCPs discovered across repositories</li>
+                        <li><strong>Secrets Detection:</strong> 4 exposed credentials with rotation links</li>
+                        <li><strong>API Inventory:</strong> 6 database, REST, SSE endpoints</li>
+                        <li><strong>AI Models:</strong> 3 AI models (GPT-4o, Claude, Llama)</li>
+                        <li><strong>Risk Assessment:</strong> Critical, high, medium risk levels</li>
+                        <li><strong>Export:</strong> JSON, CSV, Markdown, AI-BOM reports</li>
                     </ul>
                 </div>
-
-                <a href="index.html" class="start-audit-btn">Start Your Audit →</a>
 
                 <div class="privacy-note">
                     <div class="privacy-item">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="20 6 9 17 4 12"></polyline>
                         </svg>
-                        <span>Read-only demo token</span>
+                        <span>No token needed for demo</span>
                     </div>
                     <div class="privacy-item">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -404,24 +371,10 @@
             </p>
             <p style="margin-top: 0.5rem;">
                 Questions or feedback? Contact us at
-                <a href="mailto:support@apisec.ai">support@apisec.ai</a>
+                <a href="mailto:rajaram@apisec.ai">rajaram@apisec.ai</a>
             </p>
         </footer>
     </div>
 
-    <script>
-        function copyToken() {
-            const token = document.getElementById('demo-token').textContent;
-            navigator.clipboard.writeText(token).then(() => {
-                const btn = document.querySelector('.copy-btn');
-                btn.textContent = 'Copied!';
-                btn.classList.add('copied');
-                setTimeout(() => {
-                    btn.textContent = 'Copy';
-                    btn.classList.remove('copied');
-                }, 2000);
-            });
-        }
-    </script>
 </body>
 </html>
