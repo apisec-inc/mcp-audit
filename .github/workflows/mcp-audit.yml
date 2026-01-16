@@ -1,5 +1,7 @@
 # MCP Audit - Security scan for MCP configurations
-# Copy this workflow to your repository's .github/workflows/ directory
+#
+# For other repositories: Change "pip install -e ." to "pip install mcp-audit"
+# This repo installs from source since mcp-audit IS this repository
 
 name: MCP Security Audit
 
@@ -25,7 +27,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install MCP Audit
-        run: pip install mcp-audit
+        run: pip install -e .
 
       - name: Run MCP Security Scan
         run: |
