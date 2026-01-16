@@ -42,6 +42,37 @@ MCP Audit scans your AI development tools (Claude Desktop, Cursor, VS Code) and 
   Remediation: Rotate credentials, use secrets manager
 ```
 
+## What It Finds (and Doesn't Find)
+
+### What It Finds
+
+| Scan Type | Finds |
+|-----------|-------|
+| **GitHub Scan** | MCP configs committed to repositories (`mcp.json`, `.mcp/`, `claude_desktop_config.json`, etc.) |
+| **Local Scan** | MCP configs on your machine (Claude Desktop, Cursor, VS Code, Windsurf, Zed) |
+
+### What It Won't Find
+
+| Blind Spot | Why |
+|------------|-----|
+| **Secrets in environment variables at runtime** | We scan config files, not running processes |
+| **Configs pulled from secrets managers** | Vault, AWS Secrets Manager, etc. are not scanned |
+| **Dynamically generated configs** | Configs created at runtime aren't in files |
+| **MCPs installed but not configured** | No config file = nothing to scan |
+| **Private repos you don't have access to** | GitHub scan is limited by your PAT scope |
+| **Encrypted or obfuscated secrets** | Pattern matching won't catch encoded values |
+| **Non-standard config locations** | Custom paths outside known locations |
+
+### Important
+
+**A clean scan does not mean zero risk.**
+
+- Developers may have MCPs configured on machines you haven't scanned
+- Configs may exist in repos outside your GitHub org
+- Runtime behavior may differ from static configuration
+
+MCP Audit provides visibility, not guarantees. Use alongside runtime monitoring and security reviews.
+
 ## CI/CD Integration
 
 Fail builds on critical risks:
@@ -199,9 +230,39 @@ Requires Python 3.9+
 
 ---
 
-## Contributing
+## Verify Download Integrity
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+All MCP Audit releases include SHA256 checksums.
+
+### Verify CLI Download
+
+```bash
+# Download the checksum file
+curl -O https://github.com/apisec-inc/mcp-audit/releases/latest/download/CHECKSUMS.txt
+
+# Verify the zip file
+shasum -a 256 -c CHECKSUMS.txt --ignore-missing
+```
+
+Expected output:
+```
+mcp-audit-cli.zip: OK
+```
+
+### Current Release Checksum
+
+| File | SHA256 |
+|------|--------|
+| `mcp-audit-cli.zip` | `4917a451742038355265b0d9a74c0bb2b3a5ada28798ce3dd43238a8defcaa73` |
+
+Full checksums: [CHECKSUMS.txt](CHECKSUMS.txt)
+
+---
+
+## Documentation
+
+- **[Risk Scoring](docs/RISK_SCORING.md)** - How risk levels and flags are assigned
+- **[Contributing](CONTRIBUTING.md)** - Guidelines for contributors
 
 ## License
 

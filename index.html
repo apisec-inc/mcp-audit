@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>APIsec MCP Discovery and Audit</title>
-    <link rel="stylesheet" href="styles.css?v=101">
+    <link rel="stylesheet" href="styles.css?v=102">
 </head>
 <body>
     <div class="container">
@@ -284,6 +284,15 @@
                             </a>
                             <span class="download-size">~42 KB</span>
                         </div>
+
+                        <div class="verify-download">
+                            <p><strong>Verify integrity:</strong></p>
+                            <code class="verify-command">shasum -a 256 mcp-audit-cli.zip</code>
+                            <p class="checksum-display">
+                                Expected: <code id="cli-checksum">4917a451742038355265b0d9a74c0bb2b3a5ada28798ce3dd43238a8defcaa73</code>
+                                <button onclick="copyChecksum()" class="copy-btn" title="Copy checksum">Copy</button>
+                            </p>
+                        </div>
                     </div>
 
                     <div class="card">
@@ -431,7 +440,7 @@
         </footer>
     </div>
 
-    <script src="app.js?v=101"></script>
+    <script src="app.js?v=102"></script>
 </body>
 </html>
 

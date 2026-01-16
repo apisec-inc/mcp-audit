@@ -1759,3 +1759,62 @@ footer a {
     margin-top: 8px;
     text-align: center;
 }
+
+/* Verify Download Section */
+.verify-download {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: #F9FAFB;
+    border-radius: 6px;
+    font-size: 13px;
+    border: 1px solid var(--border);
+}
+
+.verify-download p {
+    margin-bottom: 8px;
+}
+
+.verify-command {
+    display: block;
+    background: #1F2937;
+    color: #E5E7EB;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-size: 12px;
+    margin-bottom: 12px;
+}
+
+.checksum-display {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+    margin-bottom: 0 !important;
+}
+
+.checksum-display code {
+    background: #E5E7EB;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-size: 11px;
+    word-break: break-all;
+    max-width: 100%;
+}
+
+.copy-btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.copy-btn:hover {
+    background: var(--primary-dark);
+}

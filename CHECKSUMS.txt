@@ -1,0 +1,6 @@
+# MCP Audit Release Checksums
+# Version: 0.1.0
+# Generated: 2026-01-16T02:50:24Z
+# Verify with: shasum -a 256 -c CHECKSUMS.txt
+
+4917a451742038355265b0d9a74c0bb2b3a5ada28798ce3dd43238a8defcaa73  mcp-audit-cli.zip

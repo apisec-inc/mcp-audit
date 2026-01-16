@@ -3237,3 +3237,20 @@ if (document.readyState === 'loading') {
 } else {
     initReportSection();
 }
+
+// Copy checksum to clipboard
+function copyChecksum() {
+    const checksum = document.getElementById('cli-checksum')?.textContent;
+    if (checksum) {
+        navigator.clipboard.writeText(checksum).then(() => {
+            const btn = document.querySelector('.copy-btn');
+            if (btn) {
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                }, 2000);
+            }
+        });
+    }
+}
