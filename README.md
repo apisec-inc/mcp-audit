@@ -6,7 +6,11 @@
 
 **See what your AI agents can access - before they go live.**
 
-![MCP Audit Screenshot](https://apisec-inc.github.io/mcp-audit/screenshot.png)
+**Web App**
+![MCP Audit Web App](https://apisec-inc.github.io/mcp-audit/screenshot.png)
+
+**CLI**
+![MCP Audit CLI](https://apisec-inc.github.io/mcp-audit/Screenshot2.png)
 
 ## Quick Start
 
