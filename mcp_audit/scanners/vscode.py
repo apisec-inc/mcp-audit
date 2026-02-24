@@ -88,27 +88,59 @@ def scan() -> list[ScanResult]:
     for config_path in get_continue_paths():
         if not config_path.exists():
             continue
-        
+
         try:
             if config_path.suffix == ".yaml":
-                # Skip YAML for now - would need pyyaml dependency
-                continue
-            config = json.loads(config_path.read_text())
+                config = _parse_continue_yaml(config_path)
+                if config is None:
+                    continue
+            else:
+                config = json.loads(config_path.read_text())
         except (json.JSONDecodeError, IOError):
             continue
-        
-        # Continue uses "experimental" > "modelContextProtocolServers"
-        experimental = config.get("experimental", {})
-        mcp_servers = experimental.get("modelContextProtocolServers", [])
-        
-        for server in mcp_servers:
-            if isinstance(server, dict):
-                name = server.get("name", server.get("transport", {}).get("command", "unknown"))
-                result = ScanResult.from_dict(
-                    {"name": name, **server},
-                    found_in="Continue",
-                    config_path=str(config_path),
-                )
-                results.append(result)
-    
+
+        # Continue >=v0.9 uses top-level "mcpServers" (list or dict)
+        mcp_servers = config.get("mcpServers", [])
+
+        # Older Continue uses "experimental" > "modelContextProtocolServers"
+        if not mcp_servers:
+            experimental = config.get("experimental", {})
+            mcp_servers = experimental.get("modelContextProtocolServers", [])
+
+        # mcpServers can be a list of dicts or a dict keyed by name
+        if isinstance(mcp_servers, dict):
+            for name, server in mcp_servers.items():
+                if isinstance(server, dict):
+                    result = ScanResult.from_dict(
+                        {"name": name, **server},
+                        found_in="Continue",
+                        config_path=str(config_path),
+                    )
+                    results.append(result)
+        elif isinstance(mcp_servers, list):
+            for server in mcp_servers:
+                if isinstance(server, dict):
+                    name = server.get("name", server.get("transport", {}).get("command", "unknown"))
+                    result = ScanResult.from_dict(
+                        {"name": name, **server},
+                        found_in="Continue",
+                        config_path=str(config_path),
+                    )
+                    results.append(result)
+
     return results
+
+
+def _parse_continue_yaml(config_path: Path) -> dict:
+    """Basic YAML parsing for Continue config (no pyyaml dependency)"""
+    try:
+        content = config_path.read_text()
+    except IOError:
+        return None
+
+    # Use the same simple YAML parser used in policy.py
+    from mcp_audit.commands.policy import _parse_simple_yaml
+    try:
+        return _parse_simple_yaml(content)
+    except Exception:
+        return None
