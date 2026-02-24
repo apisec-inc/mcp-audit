@@ -141,6 +141,24 @@ def scan_local(
         elif verbose:
             console.print("  [dim]- Zed: No config found[/dim]")
 
+        # Docker/Kubernetes configs (always scan common locations)
+        docker_paths = set()
+        if path:
+            docker_paths.add(path)
+        # Always check CWD and home directory for Docker Compose files
+        docker_paths.add(Path.cwd())
+        docker_paths.add(Path.home())
+
+        docker_results = []
+        for dp in docker_paths:
+            docker_results.extend(docker.scan(dp, recursive=False))
+        if docker_results:
+            results.extend(docker_results)
+            if verbose:
+                console.print(f"  [green]✓[/green] Docker/K8s: {len(docker_results)} MCP(s) found")
+        elif verbose:
+            console.print("  [dim]- Docker/K8s: No config found[/dim]")
+
         # Project-level configs
         if path:
             project_results = project.scan(path)
@@ -148,13 +166,6 @@ def scan_local(
                 results.extend(project_results)
                 if verbose:
                     console.print(f"  [green]✓[/green] Project configs: {len(project_results)} MCP(s) found")
-
-            # Docker/Kubernetes configs
-            docker_results = docker.scan(path)
-            if docker_results:
-                results.extend(docker_results)
-                if verbose:
-                    console.print(f"  [green]✓[/green] Docker/K8s: {len(docker_results)} MCP(s) found")
 
     # Enrich with registry data if requested
     if with_registry:
@@ -248,9 +259,9 @@ def scan_local(
         console.print("  • VS Code/Continue config")
         console.print("  • Windsurf config")
         console.print("  • Zed config")
+        console.print("  • Docker/Kubernetes configs")
         if path:
             console.print(f"  • Project directory: {path}")
-            console.print(f"  • Docker/Kubernetes configs in: {path}")
         return
 
     # Check trust if requested
