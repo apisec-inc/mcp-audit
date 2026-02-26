@@ -133,6 +133,128 @@ class TestProjectScanner:
         # Should not find the one in node_modules
         assert not any("some-package" in r.config_path for r in results)
 
+    def test_scan_claude_desktop_config_in_project(self, temp_dir):
+        """Test scanning claude_desktop_config.json in a project directory"""
+        config = {
+            "mcpServers": {
+                "my-filesystem": {
+                    "command": "npx",
+                    "args": ["@anthropic/mcp-server-filesystem", "/home"]
+                }
+            }
+        }
+        (temp_dir / "claude_desktop_config.json").write_text(json.dumps(config))
+
+        results = project.scan(temp_dir, recursive=False)
+
+        assert any(r.name == "my-filesystem" for r in results)
+        fs_result = next(r for r in results if r.name == "my-filesystem")
+        assert "Claude Config" in fs_result.found_in
+
+    def test_scan_claude_desktop_config_hyphen_variant(self, temp_dir):
+        """Test scanning claude-desktop-config.json (hyphen variant)"""
+        config = {
+            "mcpServers": {
+                "test-server": {
+                    "command": "npx",
+                    "args": ["@test/mcp-server"]
+                }
+            }
+        }
+        (temp_dir / "claude-desktop-config.json").write_text(json.dumps(config))
+
+        results = project.scan(temp_dir, recursive=False)
+
+        assert any(r.name == "test-server" for r in results)
+
+    def test_scan_continue_config_in_project(self, temp_dir):
+        """Test scanning continue_config.json with list-format mcpServers"""
+        config = {
+            "mcpServers": [
+                {
+                    "name": "docker-mcp",
+                    "command": "docker",
+                    "args": ["run", "mcp/docker"]
+                }
+            ]
+        }
+        (temp_dir / "continue_config.json").write_text(json.dumps(config))
+
+        results = project.scan(temp_dir, recursive=False)
+
+        assert any(r.name == "docker-mcp" for r in results)
+        mcp_result = next(r for r in results if r.name == "docker-mcp")
+        assert "Continue Config" in mcp_result.found_in
+
+    def test_scan_continue_experimental_format(self, temp_dir):
+        """Test scanning config with experimental.modelContextProtocolServers"""
+        config = {
+            "experimental": {
+                "modelContextProtocolServers": [
+                    {
+                        "name": "legacy-server",
+                        "command": "npx",
+                        "args": ["@test/old-mcp"]
+                    }
+                ]
+            }
+        }
+        (temp_dir / "continue_config.json").write_text(json.dumps(config))
+
+        results = project.scan(temp_dir, recursive=False)
+
+        assert any(r.name == "legacy-server" for r in results)
+
+    def test_scan_mcp_manifest(self, temp_dir):
+        """Test scanning mcp-manifest.json"""
+        config = {
+            "mcpServers": {
+                "manifest-server": {
+                    "command": "npx",
+                    "args": ["@test/manifest-mcp"]
+                }
+            }
+        }
+        (temp_dir / "mcp-manifest.json").write_text(json.dumps(config))
+
+        results = project.scan(temp_dir, recursive=False)
+
+        assert any(r.name == "manifest-server" for r in results)
+
+    def test_scan_env_file_secrets(self, temp_dir):
+        """Test scanning .env file detects secrets"""
+        env_content = "# Database config\nDB_HOST=localhost\nGITHUB_TOKEN=ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij\n"
+        (temp_dir / ".env").write_text(env_content)
+
+        results = project.scan(temp_dir, recursive=False)
+
+        env_results = [r for r in results if r.server_type == "env-file"]
+        assert len(env_results) == 1
+        assert env_results[0].secrets
+        assert any(s.type == "github_pat" for s in env_results[0].secrets)
+        assert "secrets-detected" in env_results[0].risk_flags
+
+    def test_scan_env_file_no_secrets(self, temp_dir):
+        """Test scanning .env file with no secrets returns nothing"""
+        env_content = "APP_NAME=my-app\nDEBUG=true\nPORT=3000\n"
+        (temp_dir / ".env").write_text(env_content)
+
+        results = project.scan(temp_dir, recursive=False)
+
+        env_results = [r for r in results if r.server_type == "env-file"]
+        assert len(env_results) == 0
+
+    def test_scan_env_skips_node_modules(self, temp_dir):
+        """Test that .env inside node_modules is skipped"""
+        node_modules = temp_dir / "node_modules" / "some-pkg"
+        node_modules.mkdir(parents=True)
+        (node_modules / ".env").write_text("GITHUB_TOKEN=ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij\n")
+
+        results = project.scan(temp_dir, recursive=True)
+
+        env_results = [r for r in results if r.server_type == "env-file"]
+        assert len(env_results) == 0
+
 
 class TestContinueScanner:
     """Tests for Continue extension scanner (new mcpServers format)"""
