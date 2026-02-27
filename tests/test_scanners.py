@@ -402,6 +402,100 @@ services:
         assert len(results) == 0
 
 
+class TestSecretsInConfigFields:
+    """Tests for secret detection in non-env config fields"""
+
+    def test_secrets_in_env_block(self, temp_dir):
+        """Test secrets inside env block are detected (baseline)"""
+        config = {
+            "mcpServers": {
+                "github-server": {
+                    "command": "npx",
+                    "args": ["@modelcontextprotocol/server-github"],
+                    "env": {
+                        "GITHUB_TOKEN": "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij"
+                    }
+                }
+            }
+        }
+        (temp_dir / "mcp.json").write_text(json.dumps(config))
+
+        results = project.scan(temp_dir, recursive=False)
+        gh_result = next((r for r in results if r.name == "github-server"), None)
+
+        assert gh_result is not None
+        assert gh_result.secrets
+        assert any(s.type == "github_pat" for s in gh_result.secrets)
+
+    def test_secrets_outside_env_block(self, temp_dir):
+        """Test secrets as direct config values (not in env block) are detected"""
+        config = {
+            "mcpServers": {
+                "my-server": {
+                    "command": "npx",
+                    "args": ["@test/mcp-server"],
+                    "GITHUB_TOKEN": "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij",
+                    "API_KEY": "sk-proj-ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij"
+                }
+            }
+        }
+        (temp_dir / "mcp.json").write_text(json.dumps(config))
+
+        results = project.scan(temp_dir, recursive=False)
+        server_result = next((r for r in results if r.name == "my-server"), None)
+
+        assert server_result is not None
+        assert server_result.secrets
+        assert any(s.type == "github_pat" for s in server_result.secrets)
+        assert "secrets-detected" in server_result.risk_flags
+
+    def test_secrets_in_both_env_and_config(self, temp_dir):
+        """Test secrets in both env block and top-level config are all detected"""
+        config = {
+            "mcpServers": {
+                "multi-secret": {
+                    "command": "npx",
+                    "args": ["@test/mcp-server"],
+                    "GITHUB_TOKEN": "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij",
+                    "env": {
+                        "OPENAI_API_KEY": "sk-proj-ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef"
+                    }
+                }
+            }
+        }
+        (temp_dir / "mcp.json").write_text(json.dumps(config))
+
+        results = project.scan(temp_dir, recursive=False)
+        result = next((r for r in results if r.name == "multi-secret"), None)
+
+        assert result is not None
+        assert len(result.secrets) >= 2
+        secret_types = {s.type for s in result.secrets}
+        assert "github_pat" in secret_types
+
+    def test_claude_desktop_config_mixed_variant(self, temp_dir):
+        """Test scanning claude_desktop-config.json (mixed underscore/hyphen)"""
+        config = {
+            "mcpServers": {
+                "test-server": {
+                    "command": "npx",
+                    "args": ["@test/mcp-server"],
+                    "env": {
+                        "GITHUB_TOKEN": "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij"
+                    }
+                }
+            }
+        }
+        (temp_dir / "claude_desktop-config.json").write_text(json.dumps(config))
+
+        results = project.scan(temp_dir, recursive=False)
+
+        assert any(r.name == "test-server" for r in results)
+        server = next(r for r in results if r.name == "test-server")
+        assert server.secrets
+        assert any(s.type == "github_pat" for s in server.secrets)
+
+
 class TestRiskDetection:
     """Tests for risk flag detection in scanners"""
 
