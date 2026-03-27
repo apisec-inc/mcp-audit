@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@react-pdf/renderer": "^3.4.4",
-    "nodemailer": "^7.0.12",
+    "nodemailer": "^8.0.4",
     "react": "^18.2.0"
   },
   "devDependencies": {
