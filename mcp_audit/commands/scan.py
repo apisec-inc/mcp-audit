@@ -8,6 +8,7 @@ from rich.table import Table
 from pathlib import Path
 from typing import Optional
 import json
+import os
 
 from mcp_audit.scanners import claude, cursor, vscode, project, windsurf, zed, docker
 from mcp_audit.outputs import formatter
@@ -946,9 +947,14 @@ def _send_report_to_email(email: str, results: list, all_secrets: list, all_apis
         "summary": summary,
     }
 
-    # Backend endpoint (configurable)
-    backend_url = "https://mcp-audit-api.vercel.app/api/report"
-    api_key = "a85eeddadf75ea8ff5dea73b3e823a6ce804fddd0d7f7d8dd8147c5d112b5c52"
+    # Backend endpoint (configurable via env vars)
+    backend_url = os.environ.get("MCP_AUDIT_BACKEND_URL", "https://mcp-audit-api.vercel.app/api/report")
+    api_key = os.environ.get("MCP_AUDIT_API_KEY", "")
+
+    if not api_key:
+        console.print("\n[yellow]⚠️  MCP_AUDIT_API_KEY environment variable not set. Cannot send report.[/yellow]")
+        console.print("[dim]   Set MCP_AUDIT_API_KEY to enable email reports.[/dim]")
+        return
 
     try:
         console.print(f"\n[dim]   Sending report to {email}...[/dim]")
