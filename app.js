@@ -5,11 +5,12 @@
  * Anonymous usage analytics are sent to help improve the product.
  */
 
-// Analytics endpoint
-const ANALYTICS_URL = 'https://script.google.com/macros/s/AKfycbxJ9-VwHe4455XkRElauSC8pWx65q-1OgKWQJNZnafBkfFjbvmOM6qvp07RMwUm0Qml/exec';
+// Analytics endpoint (configurable at deployment time)
+const ANALYTICS_URL = window.MCP_AUDIT_ANALYTICS_URL || '';
 
 // Send analytics event (fire and forget, non-blocking)
 function trackEvent(eventData) {
+    if (!ANALYTICS_URL) return;
     try {
         // Use GET with query params (more reliable with Google Apps Script CORS)
         const params = new URLSearchParams(eventData).toString();
@@ -3125,7 +3126,8 @@ if (document.readyState === 'loading') {
 
 // Backend endpoint for report generation
 const REPORT_API_URL = 'https://mcp-audit-api.vercel.app/api/report';
-const REPORT_API_KEY = 'a85eeddadf75ea8ff5dea73b3e823a6ce804fddd0d7f7d8dd8147c5d112b5c52';
+// API key must be configured at deployment time, not hardcoded in source
+const REPORT_API_KEY = window.MCP_AUDIT_REPORT_KEY || '';
 
 // Validate email format
 function validateEmail(email) {
@@ -3188,6 +3190,12 @@ async function sendReportToEmail(email) {
     sendBtn.disabled = true;
     statusEl.className = 'report-status loading';
     statusEl.textContent = 'Sending report...';
+
+    if (!REPORT_API_KEY) {
+        statusEl.className = 'report-status error';
+        statusEl.textContent = 'Report service not configured. Run mcp-audit scan --email from the CLI instead.';
+        return false;
+    }
 
     try {
         const summary = buildScanSummary();
