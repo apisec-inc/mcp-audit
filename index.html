@@ -441,7 +441,14 @@
         </footer>
     </div>
 
-    <script src="app.js?v=103"></script>
+    <!-- Runtime configuration (set these at deployment, not in source control) -->
+    <script>
+        // These values are injected at deployment time.
+        // For local development, set them here. For production, use your CI/CD to inject.
+        // window.MCP_AUDIT_REPORT_KEY = 'your-rotated-key-here';
+        // window.MCP_AUDIT_ANALYTICS_URL = 'your-analytics-endpoint-here';
+    </script>
+    <script src="app.js?v=104"></script>
 </body>
 </html>
 
