@@ -1,5 +1,12 @@
 # MCP Audit GitHub Action
-# Use this action in any repository to scan for MCP configurations
+# Use this action in any repository to scan for MCP configurations.
+#
+# Scope: this Action wraps `mcp-audit scan` (configuration inventory).
+# The newer `mcp-audit source-scan` command (v1.1+) is intentionally NOT
+# wrapped here — it operates on a specific source-tree path and is best
+# invoked as a direct `run:` step in your workflow so authors can choose
+# which package(s) to scan, whether to emit SARIF, and how to gate merges.
+# See docs/SOURCE_SCAN.md for the recommended workflow snippet.
 
 name: 'MCP Audit'
 description: 'Scan repository for Model Context Protocol (MCP) configurations'

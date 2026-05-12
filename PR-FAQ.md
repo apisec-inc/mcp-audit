@@ -2,14 +2,15 @@
 
 ## Press Release
 
-### APIsec Launches MCP Audit: See What Your AI Agents Can Access Before They Go Live
+### APIsec Launches MCP Audit v1.1: From Inventory to Source-Level Vulnerability Scanning
 
-**San Francisco, CA** – APIsec today announced the release of MCP Audit v1.0, a free security scanner that shows organizations exactly what their AI agents can access – before they reach production. As developers rapidly connect Claude, Cursor, and other AI assistants to databases, APIs, and internal services, MCP Audit provides the visibility and governance security teams need for this new attack surface.
+**San Francisco, CA** – APIsec today announced MCP Audit v1.1, a free security scanner that now reads MCP server source code in addition to inventorying configurations. The headline addition is detection of the "Prompt In, Shell Out" attack chain — MCP servers that pipe LLM-controlled tool arguments into shell-spawning APIs, enabling command injection from anything that controls the LLM's input.
 
-"Developers are granting AI agents access to sensitive systems – databases, APIs, credentials – often without security oversight," said Rajaram Ramanathan, founder of APIsec. "MCP Audit scans AI agent configurations across your teams and reveals exactly what each agent can touch: which databases it can query, which APIs it can call, which credentials it holds, and which AI models it uses."
+"In v1.0 we showed teams what their AI agents could access. In v1.1 we go one level deeper and read the MCP server's own code for the exact bug class attackers are already exploiting in the wild," said Rajaram Ramanathan, founder of APIsec. "If your in-house MCP server calls `child_process.exec` with a tool argument interpolated into the string, anything that can talk to the LLM can run shell commands on the host. We catch that in one command."
 
 **Key Features:**
 
+- **Source-Level Vulnerability Scanning (new in v1.1)** – `mcp-audit source-scan <path>` reads MCP server source code (JS/TS/Python) and flags shell-injection sinks: `child_process.exec`, `util.promisify(exec)`, `subprocess.run(shell=True)`, `os.system`, `os.popen`. Outputs table / JSON / SARIF for upload to GitHub code-scanning.
 - **Secrets Detection** – Find exposed API keys, tokens, and passwords with provider-specific remediation guidance
 - **API Inventory** – Discover all database, REST, SSE, SaaS, and cloud endpoints your AI agents connect to
 - **AI Model Detection** – Identify which AI models (OpenAI, Anthropic, Google, Mistral, Ollama) are configured
@@ -147,6 +148,11 @@ A: The CLI scans MCP configurations in:
 # Full scan with secrets, APIs, and model detection
 mcp-audit scan
 
+# NEW in v1.1: source-level vulnerability scan against an MCP server tree
+mcp-audit source-scan ./packages/my-mcp-server
+mcp-audit source-scan ./packages/my-mcp-server --format sarif --output mcp.sarif
+mcp-audit source-scan ./packages/my-mcp-server --exit-code   # CI gate on critical
+
 # Get PDF report via email
 mcp-audit scan --email user@company.com
 
@@ -165,6 +171,9 @@ mcp-audit scan --models-only
 # View MCP registry
 mcp-audit registry
 mcp-audit registry --risk critical
+
+# Explain a risk flag (including shell-injection-in-source, new in v1.1)
+mcp-audit explain shell-injection-in-source
 ```
 
 **Q: How do I install the CLI?**

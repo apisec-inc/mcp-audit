@@ -86,6 +86,7 @@ After running `mcp-audit scan`, you'll see a nudge in the summary suggesting `so
 |-----------|-------|
 | **GitHub Scan** | MCP configs committed to repositories (`mcp.json`, `.mcp/`, `claude_desktop_config.json`, etc.) |
 | **Local Scan** | MCP configs on your machine (Claude Desktop, Cursor, VS Code, Windsurf, Zed) |
+| **Source Scan** (v1.1) | Code-level vulnerabilities in MCP server source (JS/TS/Python): shell-injection sinks (`child_process.exec`, `util.promisify(exec)`, `subprocess.run(shell=True)`, `os.system`, `os.popen`) called with interpolated tool arguments |
 
 ### What It Won't Find
 
@@ -145,6 +146,34 @@ jobs:
           path: mcp-report.json
 ```
 
+### Source-level scan in CI (v1.1)
+
+If you ship an in-house MCP server, gate merges on critical code-level findings:
+
+```yaml
+# .github/workflows/mcp-source-scan.yml
+name: MCP Source Scan
+on: [pull_request]
+
+jobs:
+  source-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install mcp-audit
+
+      # Fail the PR if any critical shell-injection findings are detected.
+      - name: Source-scan in-house MCP server
+        run: mcp-audit source-scan ./packages/my-mcp-server --exit-code
+
+      # OR: upload findings to GitHub code-scanning instead of failing.
+      - name: Source-scan -> SARIF
+        run: mcp-audit source-scan ./packages/my-mcp-server --format sarif --output mcp.sarif
+      - uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: mcp.sarif
+```
+
 ## Export Formats
 
 ```bash
@@ -198,12 +227,25 @@ mcp-audit scan --email security@company.com
 ### Scan Commands
 
 ```bash
-mcp-audit scan                    # Full scan
+mcp-audit scan                    # Full inventory scan
 mcp-audit scan --secrets-only     # Only secrets
 mcp-audit scan --apis-only        # Only API endpoints
 mcp-audit scan --models-only      # Only AI models
 mcp-audit scan --verbose          # Detailed output
 mcp-audit scan --path ./project   # Specific directory
+```
+
+### Source-level Scan Commands (new in v1.1)
+
+`source-scan` is a separate command from `scan`. `scan` inventories MCP configurations; `source-scan` reads MCP server source code and flags code-level vulnerabilities. See [docs/SOURCE_SCAN.md](docs/SOURCE_SCAN.md) for the full guide.
+
+```bash
+mcp-audit source-scan ./my-mcp                         # Table output (default)
+mcp-audit source-scan ./my-mcp --format json           # JSON for jq pipelines
+mcp-audit source-scan ./my-mcp --format sarif          # SARIF for code-scanning
+mcp-audit source-scan ./my-mcp --output mcp.sarif      # Write to file
+mcp-audit source-scan ./my-mcp --exit-code             # CI gate (non-zero on critical)
+mcp-audit source-scan ./my-mcp --explain               # Inline remediation guidance
 ```
 
 ### Export Options
@@ -223,6 +265,13 @@ mcp-audit scan --email security@company.com       # PDF report via email
 mcp-audit registry                    # List all known MCPs
 mcp-audit registry --risk critical    # Filter by risk
 mcp-audit registry lookup "stripe"    # Search registry
+```
+
+### Explain a Risk Flag
+
+```bash
+mcp-audit explain shell-injection-in-source   # Full remediation guidance
+mcp-audit explain --list                      # All known risk flags
 ```
 
 ---
