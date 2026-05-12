@@ -8,6 +8,40 @@ from pathlib import Path
 
 
 @dataclass
+class SourceFinding:
+    """A vulnerability detected in MCP server source code.
+
+    Distinct from DetectedSecret (which lives in configs) — a SourceFinding
+    is a code-level vulnerability discovered by scanning MCP server source
+    files: shell-injection sinks, eval-on-tool-input, SQL-on-tool-input.
+    """
+    finding_type: str  # e.g., "shell-injection"
+    severity: str  # critical, high, medium, low
+    file: str  # path relative to scan root
+    line: int  # 1-indexed line number where the sink call lives
+    column: int  # 1-indexed column (0 if unknown)
+    api_used: str  # e.g., "child_process.exec", "subprocess.run(shell=True)"
+    confidence: str  # high, medium (high = literal interpolation; medium = non-literal arg)
+    snippet: str  # source line, truncated to ~200 chars
+    server_name: str = ""  # MCP server name if identifiable from surrounding file
+    remediation: str = ""  # short remediation hint (full guidance in risk_definitions)
+
+    def to_dict(self) -> dict:
+        return {
+            "finding_type": self.finding_type,
+            "severity": self.severity,
+            "file": self.file,
+            "line": self.line,
+            "column": self.column,
+            "api_used": self.api_used,
+            "confidence": self.confidence,
+            "snippet": self.snippet,
+            "server_name": self.server_name,
+            "remediation": self.remediation,
+        }
+
+
+@dataclass
 class DetectedSecret:
     """A detected secret in MCP configuration"""
     type: str  # e.g., "aws_access_key", "github_pat"

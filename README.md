@@ -46,6 +46,38 @@ MCP Audit scans your AI development tools (Claude Desktop, Cursor, VS Code) and 
   Remediation: Rotate credentials, use secrets manager
 ```
 
+## Source-level Scanning (new in v1.1)
+
+`mcp-audit scan` inventories MCP server **configurations**. The new `mcp-audit source-scan` command goes one level deeper — it reads the MCP server's own **source code** and flags code-level vulnerabilities the server author may have introduced.
+
+Today it catches the **"Prompt In, Shell Out"** attack chain: an MCP server that pipes an LLM-controlled tool argument into a shell-spawning API (`child_process.exec`, `util.promisify(exec)`, `subprocess.run(shell=True)`, `os.system`, `os.popen`) without sanitization. An attacker controlling the LLM input can inject shell metacharacters and execute arbitrary code on the host running the MCP server.
+
+```bash
+$ mcp-audit source-scan ./packages/my-mcp-server
+
+MCP source-scan: packages/my-mcp-server
+1 critical · 0 high · 1 finding(s) total
+
+  Severity  Conf  File:Line      API                                          Snippet
+  CRITICAL  high  server.js:19   util.promisify(child_process.exec) ...       const { stdout } = await execAsync(
+```
+
+Outputs:
+
+- `--format table` (default, human-readable)
+- `--format json` (CI integrations, jq pipelines)
+- `--format sarif` (upload to GitHub code-scanning / GitLab / similar)
+
+Gate merges on critical findings:
+
+```bash
+mcp-audit source-scan ./my-mcp --exit-code
+```
+
+The scanner is intentionally narrow — it only opens files that look like MCP server source (imports an MCP SDK). It won't try to find shell-injection bugs in random Node / Python code; that's not the job.
+
+After running `mcp-audit scan`, you'll see a nudge in the summary suggesting `source-scan` against any in-house or unverified servers it discovers.
+
 ## What It Finds (and Doesn't Find)
 
 ### What It Finds

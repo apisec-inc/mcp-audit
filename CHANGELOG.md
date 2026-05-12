@@ -4,6 +4,49 @@ All notable changes to MCP Audit are documented in this file.
 
 ---
 
+## [1.1.0] - 2026-05-12
+
+### Major release — source-level vulnerability scanning
+
+`mcp-audit` now reads MCP server **source code**, not just configurations. The new `source-scan` command catches the "Prompt In, Shell Out" attack chain: MCP servers that pipe LLM-controlled tool arguments into shell-spawning APIs without sanitization.
+
+#### New: `mcp-audit source-scan <path>`
+
+Scans an MCP server source tree for code-level vulnerabilities. Today the scanner catches:
+
+- **JavaScript / TypeScript**: `child_process.exec`, `child_process.execSync`, and `util.promisify(child_process.exec)` aliases (the `execAsync` pattern) called with template literals or string concatenation.
+- **Python**: `subprocess.run / Popen / call / check_call / check_output` with `shell=True`, `os.system`, and `os.popen` called with f-strings, `.format()`, `%`-formatting, or string concatenation.
+
+Each finding includes file:line, the offending API, a confidence level (`high` for visible interpolation, `medium` for non-literal arguments), and a one-line fix hint. The full remediation guidance is in `mcp-audit explain shell-injection-in-source`.
+
+Output formats:
+
+- `--format table` (default, human-readable)
+- `--format json` for CI integrations and `jq` pipelines
+- `--format sarif` for upload to GitHub code-scanning, GitLab Advanced Security, etc.
+
+CI gating:
+
+```bash
+mcp-audit source-scan ./my-mcp --exit-code   # fail on critical findings
+```
+
+The scanner is intentionally narrow — it only opens files that look like MCP server source (imports an MCP SDK: `@modelcontextprotocol/sdk`, `FastMCP`, `mcp.Server`). It will not flag shell-injection bugs in arbitrary Node or Python code; that is out of scope.
+
+#### Updated: `mcp-audit scan` adds a `source-scan` nudge
+
+When the regular `scan` command finds in-house or unverified MCP servers, the summary now suggests running `source-scan` against them. The inventory pass cannot see code-level vulnerabilities; the nudge closes that loop.
+
+#### Updated: OWASP LLM Top 10 mapping
+
+Adds **LLM05 — Improper Output Handling** to the mapping table. The new `shell-injection-in-source` risk flag maps under LLM05 because the vulnerability is exactly the LLM05 bug class: an LLM-derived value is passed to a downstream system (a shell) without sanitization.
+
+#### New risk flag
+
+`shell-injection-in-source` (CRITICAL severity). Full explanation, remediation steps, and the related-flag map are available via `mcp-audit explain shell-injection-in-source`.
+
+---
+
 ## [1.0.0] - January 14, 2026
 
 ### Major Release - Email Reports & Lead Capture

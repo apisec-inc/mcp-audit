@@ -149,6 +149,20 @@ RISK_FLAGS = {
         ],
         "related": ["unverified-source"]
     },
+    "shell-injection-in-source": {
+        "explanation": "MCP server source code calls a shell-spawning API (child_process.exec / execSync / util.promisify(exec), subprocess.run(shell=True), os.system) with arguments interpolated from tool parameters. An LLM that controls the tool call (or an attacker controlling the LLM's input) can inject shell metacharacters into the command and execute arbitrary code on the host running the MCP server. See the 'Prompt In, Shell Out' attack chain.",
+        "remediation": "Replace child_process.exec / execSync with child_process.execFile or spawn passing arguments as an array (no shell parser). In Python, never pass shell=True with user-controlled input; use subprocess.run([cmd, arg1, arg2]) with a list. Regex / escape-based sanitization is a brittle second line of defence — the structural fix is to keep the shell out of the loop entirely.",
+        "severity": "critical",
+        "detailed_steps": [
+            "Locate the call site flagged in the source-scan output (file:line).",
+            "Replace `exec`/`execSync`/`execAsync` with `execFile` or `spawn`, passing the command and each argument as separate array elements. No shell is invoked, no metacharacter parsing happens.",
+            "In Python, drop `shell=True` and pass `subprocess.run([cmd, *args])` with a list.",
+            "Add an allowlist of expected argument values where the input is bounded (e.g., `--state` ∈ {open, closed, all}).",
+            "Add a test case that passes `; rm -rf /` (or equivalent) as the tool argument and confirms it fails closed.",
+            "If shell features are genuinely needed (pipes, redirects), wrap them in a script file you call by name — never interpolate user input into a shell-parsed string."
+        ],
+        "related": ["shell-access"]
+    },
     "inferred-capability": {
         "explanation": "This capability was detected from code patterns, not explicitly declared. Actual behavior may differ.",
         "remediation": "Review MCP source code to confirm actual capabilities. Treat inferred capabilities as potential risks.",

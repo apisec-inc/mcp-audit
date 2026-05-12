@@ -23,6 +23,11 @@ OWASP_LLM_TOP_10 = {
         "description": "Risks from third-party components, models, or data",
         "mcp_relevance": "Unknown/unverified MCP sources and MCPs not in known registry represent supply chain risks",
     },
+    "LLM05": {
+        "name": "Improper Output Handling",
+        "description": "Insufficient validation, sanitization, or handling of LLM outputs before they are passed downstream to other systems",
+        "mcp_relevance": "MCP server source code that pipes LLM-controlled tool arguments into shell/SQL/eval calls without sanitization — e.g., child_process.exec(`gh ${args.repo}`) is exploitable because the LLM (or an attacker controlling its input) can inject shell metacharacters into ${args.repo}",
+    },
     "LLM06": {
         "name": "Excessive Agency",
         "description": "LLM systems granted excessive permissions or autonomy",
@@ -58,6 +63,10 @@ OWASP_LLM_TRIGGERS = {
     "LLM03": {
         "conditions": ["unverified-source", "unknown_mcp"],
         "description": "Unknown or unverified MCP sources",
+    },
+    "LLM05": {
+        "conditions": ["shell-injection-in-source"],
+        "description": "MCP server source code passes LLM-controlled arguments into shell calls without sanitization (command injection)",
     },
     "LLM06": {
         "conditions": ["database-access", "shell-access", "filesystem-access", "network-access"],

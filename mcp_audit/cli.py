@@ -6,7 +6,7 @@ import typer
 from rich.console import Console
 from typing import Optional
 
-from mcp_audit.commands import scan, analyze, trust, policy, registry
+from mcp_audit.commands import scan, analyze, trust, policy, registry, source_scan
 from mcp_audit.data.risk_definitions import (
     get_risk_flag_info,
     get_all_flags,
@@ -28,6 +28,12 @@ app.add_typer(analyze.app, name="analyze")
 app.add_typer(trust.app, name="trust")
 app.add_typer(policy.app, name="policy")
 app.add_typer(registry.app, name="registry")
+
+# source-scan is a flat command (not an add_typer subapp) so users can pass
+# both a positional ``PATH`` and options in any order, e.g.:
+#   mcp-audit source-scan ./my-mcp --format json --exit-code
+# Typer's ``add_typer`` + Argument combo refuses post-positional options.
+app.command(name="source-scan")(source_scan.source_scan)
 
 
 @app.callback()

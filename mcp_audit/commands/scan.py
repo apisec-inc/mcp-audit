@@ -485,6 +485,26 @@ def _print_summary(results: list[ScanResult], trust_results: dict = None, with_r
                 console.print(f"  [cyan]{owasp_id}[/cyan] {info['name']}")
                 console.print(f"       [dim]{info['evidence']}[/dim]")
 
+    # Nudge users with in-house / unverified MCP servers toward source-scan.
+    # The inventory pass (this command) discovers MCP servers; the source-scan
+    # pass goes one level deeper and checks for code-level vulnerabilities
+    # (shell injection in tool handlers). Worth surfacing because the
+    # vulnerable pattern is invisible at config-inventory level.
+    in_house = [r for r in results if r.server_type in {"local", "python", "npm"} and not r.is_known]
+    if in_house:
+        console.print("\n[bold yellow]Recommended next step[/bold yellow]")
+        console.print(
+            f"  {len(in_house)} in-house / unverified MCP server(s) detected. "
+            "Run [bold]mcp-audit source-scan <path>[/bold] against each to check "
+            "for shell-injection patterns in the server's source code."
+        )
+        console.print(
+            "  [dim]Background: an LLM that controls a tool argument can inject "
+            "shell metacharacters if the server pipes the arg into "
+            "child_process.exec / subprocess.run(shell=True). See "
+            "[bold]mcp-audit explain shell-injection-in-source[/bold].[/dim]"
+        )
+
 
 def _truncate(s: str, length: int) -> str:
     """Truncate string with ellipsis"""
