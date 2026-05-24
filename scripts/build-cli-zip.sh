@@ -31,7 +31,7 @@ if [ -d "$PROJECT_ROOT/collectors" ]; then
 fi
 
 # Create a simple README for the CLI package
-cat > "$TEMP_DIR/mcp-audit-cli/README.txt" << 'EOF'
+cat > "$TEMP_DIR/mcp-audit-cli/README.md" << 'EOF'
 MCP Audit CLI
 =============
 
