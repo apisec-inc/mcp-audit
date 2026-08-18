@@ -10,6 +10,7 @@ allowed_sources:
 # Deny dangerous capabilities
 denied_capabilities:
   - shell-access
+  - unsafe-command-allowlist
   - filesystem-write
 
 # Require review for these risk flags

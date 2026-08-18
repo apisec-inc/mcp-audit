@@ -69,7 +69,13 @@ OWASP_LLM_TRIGGERS = {
         "description": "MCP server source code passes LLM-controlled arguments into shell calls without sanitization (command injection)",
     },
     "LLM06": {
-        "conditions": ["database-access", "shell-access", "filesystem-access", "network-access"],
+        "conditions": [
+            "database-access",
+            "shell-access",
+            "filesystem-access",
+            "network-access",
+            "unsafe-command-allowlist",
+        ],
         "description": "MCPs with powerful access capabilities",
     },
     "LLM07": {
@@ -139,7 +145,13 @@ def get_owasp_llm_for_finding(finding_type: str, risk_flags: List[str] = None,
             seen.add("LLM03")
 
     # LLM06 - Excessive agency (dangerous access flags)
-    agency_flags = {"database-access", "shell-access", "filesystem-access", "network-access"}
+    agency_flags = {
+        "database-access",
+        "shell-access",
+        "filesystem-access",
+        "network-access",
+        "unsafe-command-allowlist",
+    }
     if agency_flags.intersection(set(risk_flags)):
         if "LLM06" not in seen:
             mappings.append({
@@ -205,6 +217,7 @@ def get_owasp_llm_for_risk_flag(flag: str) -> List[Dict]:
     flag_to_owasp = {
         "database-access": ["LLM06"],
         "shell-access": ["LLM06"],
+        "unsafe-command-allowlist": ["LLM06"],
         "filesystem-access": ["LLM06"],
         "network-access": ["LLM06"],
         "secrets-in-env": ["LLM02", "LLM07"],
@@ -273,7 +286,13 @@ def get_scan_owasp_coverage(results) -> Dict:
         }
 
     # LLM06 - Excessive agency
-    agency_flags = {"database-access", "shell-access", "filesystem-access", "network-access"}
+    agency_flags = {
+        "database-access",
+        "shell-access",
+        "filesystem-access",
+        "network-access",
+        "unsafe-command-allowlist",
+    }
     found_agency = agency_flags.intersection(all_flags)
     if found_agency:
         coverage["LLM06"] = {

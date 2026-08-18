@@ -11,6 +11,7 @@ allowed_sources:
 # Deny shell access
 denied_capabilities:
   - shell-access
+  - unsafe-command-allowlist
 
 # Require review for these
 require_review:

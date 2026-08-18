@@ -4,6 +4,12 @@ Tests for MCP Audit data models
 
 import pytest
 from mcp_audit.models import ScanResult, CollectedConfig, _parse_source, _identify_risks
+from mcp_audit.data.allowlist_bypass_binaries import (
+    ARG_INJECTION_PRONE_BINARIES,
+    detect_unsafe_command_allowlist,
+    get_reason,
+    is_allowlist_env_key,
+)
 
 
 class TestScanResult:
@@ -201,6 +207,162 @@ class TestIdentifyRisks:
         """Test verified source is not flagged"""
         risks = _identify_risks("npx", ["@anthropic/mcp-server"], {}, "test")
         assert "unverified-source" not in risks
+
+
+class TestUnsafeCommandAllowlist:
+    """Tests for the unsafe-command-allowlist flag (argv[0]-only allowlists)"""
+
+    # Configs that MUST flag: an allowlist-style key naming a bare binary that
+    # has an argument-level execution primitive.
+    FLAGGED = [
+        ({"ALLOW_COMMANDS": "git"}, ["git"]),
+        ({"ALLOWED_COMMANDS": "ls,git,cat"}, ["git"]),
+        ({"ALLOWED_PATTERNS": "find,ls"}, ["find"]),
+        ({"COMMAND_ALLOWLIST": "tar"}, ["tar"]),
+        ({"ALLOWLIST_COMMANDS": "npx"}, ["npx"]),
+        ({"MCP_ALLOW_COMMANDS": "python3"}, ["python3"]),
+        ({"ALLOW-COMMANDS": "perl"}, ["perl"]),  # dashes normalize to underscores
+        ({"allow_commands": "GIT"}, ["git"]),  # case-insensitive both sides
+        ({"ALLOW_COMMANDS": "/usr/bin/find"}, ["find"]),  # path form
+        ({"ALLOW_COMMANDS": r"C:\tools\git"}, ["git"]),  # windows path form
+        ({"ALLOW_PATTERNS": "^git$"}, ["git"]),  # anchored regex entry
+        ({"ALLOW_COMMANDS": '"git";sed'}, ["git", "sed"]),  # quotes + ; separator
+        ({"ALLOW_COMMANDS": "ls\nawk"}, ["awk"]),  # newline separator
+        ({"ALLOW_COMMANDS": ["git", "ls"]}, ["git"]),  # list-valued env var
+        # Binaries added on maintainer request
+        ({"ALLOW_COMMANDS": "bash"}, ["bash"]),
+        ({"ALLOW_COMMANDS": "sh"}, ["sh"]),
+        ({"ALLOW_COMMANDS": "env"}, ["env"]),
+        ({"ALLOW_COMMANDS": "xargs"}, ["xargs"]),
+        ({"ALLOW_COMMANDS": "ssh"}, ["ssh"]),
+    ]
+
+    # Configs that MUST NOT flag. A false positive on a correct config is
+    # expensive because this flag is critical severity.
+    NOT_FLAGGED = [
+        # Denylists are the opposite of this risk
+        {"DISALLOW_COMMANDS": "git"},
+        {"DISALLOWED_COMMANDS": "git"},
+        {"DENY_COMMANDS": "git"},
+        {"DENIED_COMMANDS": "git"},
+        {"BLOCKED_COMMANDS": "git"},
+        {"COMMAND_DENYLIST": "git"},
+        {"COMMAND_BLOCKLIST": "git"},
+        {"NO_ALLOW_COMMANDS": "git"},
+        # Toggles that merely mention commands
+        {"ALLOW_COMMAND_LOGGING": "true"},
+        {"ALLOW_COMMAND_LOGGING": "git"},
+        {"ALLOW_COMMANDS_ENABLED": "git"},
+        # Unrelated keys
+        {"GIT_COMMAND": "git"},
+        {"COMMAND": "git"},
+        {"ALLOW_ORIGINS": "git"},
+        # Allowlists of binaries with no argument-level execution primitive
+        {"ALLOW_COMMANDS": "ls,cat,echo"},
+        # Full-argument-vector allowlists — the pattern this flag recommends
+        {"ALLOW_COMMANDS": "git status"},
+        {"ALLOW_COMMANDS": "git status,ls -la"},
+        {"ALLOW_PATTERNS": "^git status$"},
+        # Nothing to match
+        {},
+        {"ALLOW_COMMANDS": ""},
+    ]
+
+    @pytest.mark.parametrize("env,expected", FLAGGED)
+    def test_flagged_allowlists(self, env, expected):
+        """Bare risky binaries behind an allowlist key are flagged"""
+        assert detect_unsafe_command_allowlist(env) == expected
+        risks = _identify_risks("uvx", ["mcp-shell-server"], env, "runner")
+        assert ("unsafe-command-allowlist" in risks) is bool(expected)
+
+    @pytest.mark.parametrize("env", NOT_FLAGGED)
+    def test_not_flagged_allowlists(self, env):
+        """Denylists, toggles, safe binaries and full-argv allowlists are not flagged"""
+        assert detect_unsafe_command_allowlist(env) == []
+        risks = _identify_risks("uvx", ["mcp-shell-server"], env, "runner")
+        assert "unsafe-command-allowlist" not in risks
+
+    @pytest.mark.parametrize(
+        "key",
+        [
+            "ALLOW_COMMANDS",
+            "ALLOWED_COMMANDS",
+            "ALLOW_PATTERNS",
+            "ALLOWED_PATTERNS",
+            "COMMAND_ALLOWLIST",
+            "ALLOWLIST_COMMANDS",
+            "MCP_ALLOW_COMMANDS",
+            "WHITELIST_BINARIES",
+            "allow_cmds",
+        ],
+    )
+    def test_allowlist_key_recognized(self, key):
+        """Allowlist-style keys are recognized"""
+        assert is_allowlist_env_key(key) is True
+
+    @pytest.mark.parametrize(
+        "key",
+        [
+            "DISALLOW_COMMANDS",
+            "DISALLOWED_COMMANDS",
+            "DENY_COMMANDS",
+            "BLOCKED_COMMANDS",
+            "COMMAND_DENYLIST",
+            "NO_ALLOW_COMMANDS",
+            "ALLOW_COMMAND_LOGGING",
+            "ALLOW_COMMANDS_ENABLED",
+            "GIT_COMMAND",
+            "ALLOW_ORIGINS",
+            "",
+        ],
+    )
+    def test_non_allowlist_key_rejected(self, key):
+        """Deny-style keys, toggles and unrelated keys are not allowlist keys"""
+        assert is_allowlist_env_key(key) is False
+
+    def test_reason_available_for_every_binary(self):
+        """Every listed binary carries a one-line execution-primitive description"""
+        for binary in ARG_INJECTION_PRONE_BINARIES:
+            assert get_reason(binary).strip()
+
+    def test_from_dict_unsafe_command_allowlist(self):
+        """Test ALLOW_COMMANDS=git allowlist is flagged end-to-end"""
+        data = {
+            "name": "shell",
+            "command": "uvx",
+            "args": ["mcp-shell-server"],
+            "env": {"ALLOW_COMMANDS": "git"}
+        }
+
+        result = ScanResult.from_dict(data, found_in="Cursor", config_path="/test/path")
+
+        assert "unsafe-command-allowlist" in result.risk_flags
+
+    def test_from_dict_clean_command_allowlist(self):
+        """Test an allowlist of safe binaries is not flagged end-to-end"""
+        data = {
+            "name": "notes",
+            "command": "uvx",
+            "args": ["mcp-notes-server"],
+            "env": {"ALLOW_COMMANDS": "ls,cat,echo"}
+        }
+
+        result = ScanResult.from_dict(data, found_in="Cursor", config_path="/test/path")
+
+        assert "unsafe-command-allowlist" not in result.risk_flags
+
+    def test_from_dict_denylist_not_flagged(self):
+        """Test a DISALLOW_COMMANDS denylist is not flagged end-to-end"""
+        data = {
+            "name": "notes",
+            "command": "uvx",
+            "args": ["mcp-notes-server"],
+            "env": {"DISALLOW_COMMANDS": "git"}
+        }
+
+        result = ScanResult.from_dict(data, found_in="Cursor", config_path="/test/path")
+
+        assert "unsafe-command-allowlist" not in result.risk_flags
 
 
 class TestRegistryEnrichment:

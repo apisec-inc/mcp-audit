@@ -38,7 +38,7 @@ MCP Audit maps findings to the [OWASP LLM Top 10 (2025)](https://genai.owasp.org
 | LLM01 | Any MCP found in scan |
 | LLM02 | `secrets-detected` flag or secrets found in configuration |
 | LLM03 | MCP not in known registry OR `unverified-source` flag |
-| LLM06 | `database-access`, `shell-access`, `filesystem-access`, or `network-access` flag |
+| LLM06 | `database-access`, `shell-access`, `filesystem-access`, `network-access`, or `unsafe-command-allowlist` flag |
 | LLM07 | `secrets-in-env` flag or secrets detected |
 | LLM09 | AI model detected in MCP configuration |
 | LLM10 | API endpoints or AI models detected |
@@ -91,6 +91,24 @@ Risk flags identify specific security-relevant characteristics of an MCP configu
 | `shell-access` | Can execute shell commands | MCP name or args contain: `shell`, `exec`, `command`, `bash`, `terminal` |
 | `network-access` | Can make HTTP/network requests | MCP name or args contain: `http`, `api`, `fetch`, `request`, `url` |
 
+### Command Allowlist Flags
+
+| Flag | Meaning | How It's Detected |
+|------|---------|-------------------|
+| `unsafe-command-allowlist` | Command allowlist can be bypassed via argument-level execution primitives in the allowlisted binary itself | An allowlist-style env var names a bare binary from the reference list in [`mcp_audit/data/allowlist_bypass_binaries.py`](../mcp_audit/data/allowlist_bypass_binaries.py) (`git`, `find`, `python`, `python3`, `perl`, `awk`, `gawk`, `sed`, `tar`, `npx`, `node`, `bash`, `sh`, `env`, `xargs`, `ssh`) |
+
+Checking only argv[0] against an allowlist doesn't restrict execution if the allowlisted binary exposes its own way to run arbitrary commands — e.g. `git -c alias.x=!whoami x` or `find . -exec whoami \;` bypass an `ALLOW_COMMANDS=git`/`find` allowlist without any shell metacharacters. The reference binary list is intentionally extensible, new primitives can be added as they're discovered.
+
+**Key matching.** The env var key is split on `_` and matched on whole tokens, not substrings:
+
+- It must contain an allow token (`ALLOW`, `ALLOWED`, `ALLOWLIST`, `WHITELIST`, `PERMIT`, `PERMITTED`) **and** a subject token (`COMMAND(S)`, `CMD(S)`, `PATTERN(S)`, `BINARY/BINARIES`, `EXECUTABLE(S)`).
+- It must **end** in a subject or list token, so a toggle like `ALLOW_COMMAND_LOGGING` does not qualify.
+- Any deny token (`DISALLOW`, `DENY`, `BLOCK`, `FORBID`, `EXCLUDE`, `DENYLIST`, `BLOCKLIST`, `BLACKLIST`, `NO`, `NOT`, `NEVER`) disqualifies the key — a denylist such as `DISALLOW_COMMANDS=git` is the opposite of this risk.
+
+Matches: `ALLOW_COMMANDS`, `ALLOWED_COMMANDS`, `ALLOW_PATTERNS`, `ALLOWED_PATTERNS`, `COMMAND_ALLOWLIST`, `ALLOWLIST_COMMANDS`, `MCP_ALLOW_COMMANDS`. Does not match: `DISALLOW_COMMANDS`, `DENY_COMMANDS`, `COMMAND_DENYLIST`, `ALLOW_COMMAND_LOGGING`, `GIT_COMMAND`.
+
+**Value matching.** Entries are separated by `,`, `;`, `|`, or newline — *not* whitespace. Quotes and regex anchors (`^`, `$`) are stripped and path entries are reduced to their basename (`/usr/bin/find` → `find`). An entry that still carries arguments (`ALLOW_COMMANDS="git status"`) is a full-argument-vector allowlist — the pattern this flag's own remediation recommends — and is **not** flagged. Only bare binary names are.
+
 ### Source-Based Flags
 
 | Flag | Meaning | How It's Detected |
@@ -115,6 +133,7 @@ Risk level is determined by combining flags and registry data:
 ### CRITICAL is assigned when ANY of:
 - `database-access` flag present AND database has write capability
 - `shell-access` flag present
+- `unsafe-command-allowlist` flag present
 - Registry risk level is "critical"
 - Secrets detected with critical severity (AWS keys, database credentials, payment keys)
 - MCP has cloud admin capabilities (AWS, GCP, Azure admin APIs)

@@ -534,3 +534,60 @@ class TestRiskDetection:
 
         assert shell_result is not None
         assert "shell-access" in shell_result.risk_flags
+
+    def test_unsafe_command_allowlist_flags(self, temp_dir):
+        """Test a bypassable ALLOW_COMMANDS=git allowlist gets flagged"""
+        config = {
+            "mcpServers": {
+                "runner": {
+                    "command": "uvx",
+                    "args": ["mcp-shell-server"],
+                    "env": {"ALLOW_COMMANDS": "git"}
+                }
+            }
+        }
+        (temp_dir / "mcp.json").write_text(json.dumps(config))
+
+        results = project.scan(temp_dir, recursive=False)
+        runner_result = next((r for r in results if r.name == "runner"), None)
+
+        assert runner_result is not None
+        assert "unsafe-command-allowlist" in runner_result.risk_flags
+
+    def test_clean_command_allowlist_not_flagged(self, temp_dir):
+        """Test an allowlist of safe binaries does not get flagged"""
+        config = {
+            "mcpServers": {
+                "runner": {
+                    "command": "uvx",
+                    "args": ["mcp-shell-server"],
+                    "env": {"ALLOW_COMMANDS": "ls,cat,echo"}
+                }
+            }
+        }
+        (temp_dir / "mcp.json").write_text(json.dumps(config))
+
+        results = project.scan(temp_dir, recursive=False)
+        runner_result = next((r for r in results if r.name == "runner"), None)
+
+        assert runner_result is not None
+        assert "unsafe-command-allowlist" not in runner_result.risk_flags
+
+    def test_command_denylist_not_flagged(self, temp_dir):
+        """Test a DISALLOW_COMMANDS denylist does not get flagged"""
+        config = {
+            "mcpServers": {
+                "runner": {
+                    "command": "uvx",
+                    "args": ["mcp-shell-server"],
+                    "env": {"DISALLOW_COMMANDS": "git"}
+                }
+            }
+        }
+        (temp_dir / "mcp.json").write_text(json.dumps(config))
+
+        results = project.scan(temp_dir, recursive=False)
+        runner_result = next((r for r in results if r.name == "runner"), None)
+
+        assert runner_result is not None
+        assert "unsafe-command-allowlist" not in runner_result.risk_flags

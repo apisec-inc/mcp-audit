@@ -245,7 +245,7 @@ def _validate_mcp(mcp: dict, policy: dict) -> dict:
     # Check max_risk_level
     max_risk = policy.get("max_risk_level", None)
     if max_risk:
-        high_risk = ["shell-access", "unverified-source"]
+        high_risk = ["shell-access", "unverified-source", "unsafe-command-allowlist"]
         medium_risk = ["filesystem-access", "database-access", "secrets-in-env"]
 
         if max_risk == "low":

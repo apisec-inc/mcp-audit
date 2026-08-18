@@ -86,6 +86,12 @@ class TestRiskFlagMapping:
         assert "LLM02" in ids
         assert "LLM07" in ids
 
+    def test_unsafe_command_allowlist_maps_to_llm06(self):
+        """unsafe-command-allowlist maps to excessive agency"""
+        refs = get_owasp_llm_for_risk_flag("unsafe-command-allowlist")
+        ids = [r["id"] for r in refs]
+        assert "LLM06" in ids
+
     def test_unverified_source_maps_to_llm03(self):
         """unverified-source maps to supply chain"""
         refs = get_owasp_llm_for_risk_flag("unverified-source")
@@ -122,6 +128,12 @@ class TestFindingMapping:
     def test_shell_access_flag_triggers_llm06(self):
         """shell-access flag triggers LLM06"""
         refs = get_owasp_llm_for_finding("any", risk_flags=["shell-access"])
+        ids = [r["id"] for r in refs]
+        assert "LLM06" in ids
+
+    def test_unsafe_command_allowlist_flag_triggers_llm06(self):
+        """unsafe-command-allowlist flag triggers LLM06"""
+        refs = get_owasp_llm_for_finding("any", risk_flags=["unsafe-command-allowlist"])
         ids = [r["id"] for r in refs]
         assert "LLM06" in ids
 

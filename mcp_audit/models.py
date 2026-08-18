@@ -337,6 +337,11 @@ def _identify_risks(command: str, args: list[str], env: dict, name: str) -> list
     if any(kw in name_lower or kw in all_args for kw in shell_keywords):
         risks.append("shell-access")
     
+    # Check for a command allowlist that can be bypassed via argument-level
+    # execution primitives in the allowlisted binary itself (e.g. git aliases)
+    if _detect_unsafe_command_allowlist(env):
+        risks.append("unsafe-command-allowlist")
+    
     # Check for API/network access
     api_keywords = ["http", "api", "fetch", "request", "url"]
     if any(kw in name_lower or kw in all_args for kw in api_keywords):
@@ -395,6 +400,24 @@ def _detect_secrets_in_env(env: dict, config_path: str = None, mcp_name: str = N
         ))
 
     return secrets
+
+
+def _detect_unsafe_command_allowlist(env: dict) -> list:
+    """
+    Detect allowlist-style env vars (ALLOW_COMMANDS, ALLOWED_PATTERNS, etc.)
+    whose value includes a binary known to have argument-level execution
+    primitives (e.g. `git -c alias.x=!whoami`).
+    Returns the list of matched binary names.
+    """
+    try:
+        from mcp_audit.data.allowlist_bypass_binaries import detect_unsafe_command_allowlist
+    except ImportError:
+        return []
+
+    if not env:
+        return []
+
+    return detect_unsafe_command_allowlist(env)
 
 
 def _detect_apis_in_config(raw_config: dict, args: list, mcp_name: str) -> list:

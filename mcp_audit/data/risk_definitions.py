@@ -49,6 +49,19 @@ RISK_FLAGS = {
         ],
         "related": ["filesystem-write", "admin-credentials"]
     },
+    "unsafe-command-allowlist": {
+        "explanation": "This MCP is configured with a command allowlist (e.g. ALLOW_COMMANDS) whose value includes a binary known to have argument-level execution primitives. Checking argv[0] alone does not restrict execution if the allowlisted binary can itself be told to run arbitrary commands (e.g. `git -c alias.x=!whoami`, `find . -exec whoami \\;`, `python -c '...'`).",
+        "remediation": "Do not rely on binary-name allowlists alone. Validate/allowlist the full argument vector, strip or reject dangerous flags (-c, -exec, -e, --checkpoint-action, etc.), or run the allowlisted binary in a sandbox with no ambient credentials/network access.",
+        "severity": "critical",
+        "detailed_steps": [
+            "Identify which allowlisted binary is exposed and consult its argument-level execution primitive (see the reference list of argument-injection-prone binaries).",
+            "Reject or strip flags/config options that enable execution (e.g. git's -c, --exec, --upload-pack; find's -exec/-execdir; python/perl/awk/sed's inline-code flags).",
+            "Prefer an allowlist of full argument vectors (binary + expected args) over a binary-name-only allowlist.",
+            "Run the allowlisted binary in a sandbox or container with no ambient credentials, network access, or write access to sensitive paths.",
+            "Monitor and log all commands executed through the MCP, including full argv."
+        ],
+        "related": ["shell-access"]
+    },
     "filesystem-access": {
         "explanation": "This MCP can read and/or write files on the host system. Could leak sensitive files or modify system configuration.",
         "remediation": "Restrict to specific directories. Use read-only mode if writes are not required. Never allow access to home directory or system paths.",
