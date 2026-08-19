@@ -2351,7 +2351,7 @@ function displayResults() {
                 <td class="description-cell">${escapeHtml(description)}</td>
                 <td><code>${escapeHtml(r.source)}</code></td>
                 <td>
-                    <a href="https://github.com/${r.repository}/blob/main/${r.filePath}" target="_blank" title="${escapeHtml(r.repository)}">
+                    <a href="https://github.com/${escapeHtml(r.repository)}/blob/main/${escapeHtml(r.filePath)}" target="_blank" title="${escapeHtml(r.repository)}">
                         ${escapeHtml(r.repository.split('/')[1] || r.repository)}
                     </a>
                 </td>
